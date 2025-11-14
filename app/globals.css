@@ -1,15 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #faf6e6;
   --foreground: #171717;
+}
+
+/* Increase base font size for improved readability */
+html {
+  font-size: 18px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-shadows-into-light);
+  --font-mono: var(--font-shadows-into-light);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +27,60 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-shadows-into-light);
+  line-height: 1.6;
+  font-weight: 600; /* stronger default for readability */
+}
+
+/* Use Shadows Into Light for headings as well */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-shadows-into-light);
+  font-weight: 800; /* stronger headings */
+}
+
+/* Slightly widen regular text and tune bold/heading tracking */
+body {
+  letter-spacing: 0.02em; /* a bit wider for readability with this script font */
+}
+
+strong,
+b,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-semibold,
+.font-bold {
+  letter-spacing: 0.01em; /* slightly tighter than body to balance weight */
+}
+
+/* Ensure bold text and Tailwind weight utilities are visibly stronger */
+strong,
+b {
+  font-weight: 700;
+}
+.font-semibold {
+  font-weight: 700 !important;
+}
+.font-bold {
+  font-weight: 800 !important;
+}
+
+/* Simple entry animation for step transitions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

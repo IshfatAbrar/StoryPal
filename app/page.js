@@ -1,65 +1,394 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import SiteHeader from "./components/SiteHeader";
+import HeroBanner from "./components/HeroBanner";
 
 export default function Home() {
+  const [step, setStep] = useState(1);
+  const [userName, setUserName] = useState("");
+  const [doctorName, setDoctorName] = useState("");
+  const [selectedScene, setSelectedScene] = useState(null);
+  const [storyStep, setStoryStep] = useState(0);
+  const [userResponse, setUserResponse] = useState("");
+  const [selectedChoice, setSelectedChoice] = useState(null);
+
+  const scenes = [
+    {
+      id: 1,
+      title: "Scene 1: The Small Light Explorer",
+      construct: "Empathy + Imagery",
+      blurb:
+        "Chatbot introduces Dr. Mia and explains the otoscope as a tiny flashlight hero.",
+      accent: "",
+      image:
+        "https://thumbs.dreamstime.com/b/doctor-examining-patient-s-ear-otoscope-clinic-setting-uses-to-examine-medical-perfect-healthcare-wellness-383673624.jpg",
+    },
+    {
+      id: 2,
+      title: "Scene 2: Heartbeat Detective",
+      construct: "Emotional Absorption",
+      blurb:
+        "Simulates heartbeat sounds and encourages the child to listen along.",
+      accent: "",
+      image:
+        "https://www.shutterstock.com/image-vector/male-doctor-pediatrician-examines-baby-260nw-2650333027.jpg",
+    },
+    {
+      id: 3,
+      title: "Scene 3: Calm Breathing Mission",
+      construct: "Emotional Regulation + Transfer",
+      blurb:
+        "Guides calm breathing exercises, visualizing air as colorful bubbles.",
+      accent: "",
+      image:
+        "https://cdn.vectorstock.com/i/1000v/14/05/gp-doctor-listen-breathing-lungs-heart-vector-48191405.jpg",
+    },
+    {
+      id: 4,
+      title: "Scene 4: Funny Reflex Game",
+      construct: "Play + Curiosity",
+      blurb: "Turns the reflex check into a quick silly game to ease nerves.",
+      accent: "",
+      image:
+        "https://cdn.vectorstock.com/i/1000v/14/05/gp-doctor-listen-breathing-lungs-heart-vector-48191405.jpg",
+    },
+    {
+      id: 5,
+      title: "Scene 5: Eye Check Adventure",
+      construct: "Exploration + Focus",
+      blurb: "A spot-the-animals quest that makes eye checks fun and engaging.",
+      accent: "",
+      image:
+        "https://media.istockphoto.com/id/1441376961/vector/ophthalmology-concept-eye-doctors-oculists-opticians-ophthalmologists-holding-eyeglasses.jpg?s=612x612&w=0&k=20&c=z3FP-N8XrbDL_ImMEykuapKoL8W9botxdPKZqMqWyaE=",
+    },
+    {
+      id: 6,
+      title: "Scene 6: Rewards and Achievement",
+      construct: "Rewards + Achievement",
+      blurb: "Celebrate bravery with stickers and a cheerful behavior chart.",
+      accent: "",
+      image:
+        "https://static.vecteezy.com/system/resources/previews/013/974/033/non_2x/smiling-young-male-doctor-in-white-medical-uniform-hold-stethoscope-ready-to-check-or-examine-patient-happy-male-gp-or-therapist-checkup-in-hospital-medicine-illustration-vector.jpg",
+    },
+  ];
+
+  const goToStep2 = () => {
+    if (userName.trim()) setStep(2);
+  };
+
+  const goToStep3 = () => {
+    // advance regardless; optionally require doctorName.trim()
+    setStep(3);
+  };
+
+  const getStoryForScene = (sceneId) => {
+    const stories = {
+      1: [
+        {
+          type: "doctor",
+          message: `Hey ${userName || "there"}, welcome to my clinic! I'm ${
+            doctorName || "Dr. Smith"
+          }, an otolaryngologist.`,
+        },
+        {
+          type: "doctor",
+          message:
+            "I'm an ear, nose, and throat specialist. What brings you here today?",
+        },
+        {
+          type: "user-input",
+          message: "What made you come here?",
+          placeholder: "I feel pain in my ear...",
+        },
+        {
+          type: "doctor",
+          message:
+            "I understand. Let's explore this together. I have a special tool called an otoscope - it's like a tiny flashlight hero that helps me see inside your ear!",
+        },
+        {
+          type: "doctor",
+          message: "If you imagine your pain, what color would it be?",
+        },
+        {
+          type: "choice",
+          message: "Choose a color:",
+          options: ["Red", "Blue", "Yellow", "Green", "Purple"],
+        },
+        {
+          type: "doctor",
+          message:
+            "That's a beautiful color! Now, let's use our tiny flashlight hero to see what's going on. The light will be gentle and warm.",
+        },
+        {
+          type: "doctor",
+          message: "Can you imagine what color the light might be?",
+        },
+        {
+          type: "choice",
+          message: "What color would make you feel calm?",
+          options: ["Soft blue", "Warm yellow", "Calm green", "Gentle pink"],
+        },
+        {
+          type: "doctor",
+          message:
+            "Perfect! Now let's use that gentle light to explore. You're doing great!",
+        },
+      ],
+      2: [
+        {
+          type: "doctor",
+          message: `Hello ${userName || "there"}! I'm ${
+            doctorName || "Dr. Smith"
+          }, a cardiologist.`,
+        },
+        {
+          type: "doctor",
+          message: "I'm a heart specialist. What brings you to see me today?",
+        },
+        {
+          type: "user-input",
+          message: "What made you come here?",
+          placeholder: "I've been feeling my heart beat fast...",
+        },
+        {
+          type: "doctor",
+          message:
+            "That's important to check! I have a special tool called a stethoscope - it's like having super hearing to listen to your heartbeat.",
+        },
+        {
+          type: "doctor",
+          message:
+            "Let's listen together. Your heartbeat sounds like a steady drumbeat - that means your heart is strong and healthy!",
+        },
+        {
+          type: "doctor",
+          message: "How does your heartbeat sound to you?",
+        },
+        {
+          type: "choice",
+          message: "What does it remind you of?",
+          options: ["A drum", "A clock ticking", "A train chugging", "A song"],
+        },
+        {
+          type: "doctor",
+          message:
+            "That's a wonderful way to think about it! Your heart is working perfectly, keeping you strong and healthy.",
+        },
+      ],
+      3: [
+        {
+          type: "doctor",
+          message: `Hi ${userName || "there"}! Welcome! I'm ${
+            doctorName || "Dr. Smith"
+          }, a pulmonologist.`,
+        },
+        {
+          type: "doctor",
+          message: "I'm a breathing specialist. What brings you here today?",
+        },
+        {
+          type: "user-input",
+          message: "What made you come here?",
+          placeholder: "I've been having trouble breathing...",
+        },
+        {
+          type: "doctor",
+          message:
+            "Let's help you breathe easier! I want to show you a special breathing exercise.",
+        },
+        {
+          type: "doctor",
+          message:
+            "Imagine your breath as colorful bubbles. When you breathe in, beautiful bubbles float into your body. When you breathe out, they float away gently.",
+        },
+        {
+          type: "doctor",
+          message: "What color would your breathing bubbles be?",
+        },
+        {
+          type: "choice",
+          message: "Choose your bubble color:",
+          options: ["Rainbow", "Blue", "Green", "Pink", "Gold"],
+        },
+        {
+          type: "doctor",
+          message:
+            "Beautiful! Now let's take a calm breath together. Breathe in slowly... and breathe out gently. Just like in our story!",
+        },
+        {
+          type: "doctor",
+          message:
+            "You're doing amazing! Your breathing is calm and steady now.",
+        },
+      ],
+      4: [
+        {
+          type: "doctor",
+          message: `Hey ${userName || "there"}! I'm ${
+            doctorName || "Dr. Smith"
+          }, a neurologist.`,
+        },
+        {
+          type: "doctor",
+          message:
+            "I'm a brain and nervous system specialist. What brings you here?",
+        },
+        {
+          type: "user-input",
+          message: "What made you come here?",
+          placeholder: "My knee feels strange when tapped...",
+        },
+        {
+          type: "doctor",
+          message:
+            "I see! Let's turn this into a fun game! I'm going to check your reflexes - it's like a quick dance move your body does automatically.",
+        },
+        {
+          type: "doctor",
+          message:
+            "When I tap your knee, your leg will do a little jump - that's your body being super smart and protecting you!",
+        },
+        {
+          type: "doctor",
+          message: "What do you think your reflex will look like?",
+        },
+        {
+          type: "choice",
+          message: "Choose your reflex style:",
+          options: [
+            "A quick hop",
+            "A gentle bounce",
+            "A surprise jump",
+            "A playful kick",
+          ],
+        },
+        {
+          type: "doctor",
+          message:
+            "Perfect! Your reflexes are working great - your body is protecting you perfectly!",
+        },
+      ],
+      5: [
+        {
+          type: "doctor",
+          message: `Hello ${userName || "there"}! I'm ${
+            doctorName || "Dr. Smith"
+          }, an ophthalmologist.`,
+        },
+        {
+          type: "doctor",
+          message: "I'm an eye specialist. What brings you to see me today?",
+        },
+        {
+          type: "user-input",
+          message: "What made you come here?",
+          placeholder: "I'm having trouble seeing clearly...",
+        },
+        {
+          type: "doctor",
+          message:
+            "Let's make this fun! Instead of reading letters, we're going on an eye check adventure!",
+        },
+        {
+          type: "doctor",
+          message:
+            "I'll show you a special chart with animals instead of letters. Can you spot the giraffe?",
+        },
+        {
+          type: "choice",
+          message: "Which animal can you see clearly?",
+          options: ["Giraffe", "Rabbit", "Elephant", "Dog", "Cat", "Bird"],
+        },
+        {
+          type: "doctor",
+          message:
+            "Great job! Your eyes are working well. Let's see if you can spot the next animal!",
+        },
+        {
+          type: "choice",
+          message: "What's the smallest animal you can see?",
+          options: ["Dog", "Cat", "Bird", "All of them"],
+        },
+        {
+          type: "doctor",
+          message:
+            "Excellent! Your eyes are exploring perfectly. You're doing great!",
+        },
+      ],
+      6: [
+        {
+          type: "doctor",
+          message: `Hi ${userName || "there"}! I'm ${
+            doctorName || "Dr. Smith"
+          }!`,
+        },
+        {
+          type: "doctor",
+          message:
+            "You've been so brave today! Let's celebrate all the amazing things you did!",
+        },
+        {
+          type: "doctor",
+          message:
+            "You listened to your heartbeat, practiced calm breathing, checked your reflexes, and explored with your eyes!",
+        },
+        {
+          type: "doctor",
+          message: "Which part did you like the most?",
+        },
+        {
+          type: "choice",
+          message: "What was your favorite?",
+          options: [
+            "The heartbeat detective",
+            "The breathing bubbles",
+            "The reflex game",
+            "The eye adventure",
+            "All of them!",
+          ],
+        },
+        {
+          type: "doctor",
+          message:
+            "Wonderful choice! You've earned a special reward for being so brave and cooperative!",
+        },
+        {
+          type: "doctor",
+          message: "🌟 You're a medical hero! 🌟",
+        },
+      ],
+    };
+    return stories[sceneId] || [];
+  };
+
+  const currentStory = selectedScene ? getStoryForScene(selectedScene.id) : [];
+  const currentStep = currentStory[storyStep];
+
+  const handleNext = () => {
+    if (currentStep?.type === "user-input" && !userResponse.trim()) {
+      return;
+    }
+    if (currentStep?.type === "choice" && !selectedChoice) {
+      return;
+    }
+    if (storyStep < currentStory.length - 1) {
+      setStoryStep(storyStep + 1);
+      setUserResponse("");
+      setSelectedChoice(null);
+    } else {
+      // Story complete
+      setSelectedScene(null);
+      setStoryStep(0);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <HeroBanner />
     </div>
   );
 }
