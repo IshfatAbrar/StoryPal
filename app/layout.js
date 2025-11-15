@@ -1,5 +1,6 @@
 import { Geist_Mono, DynaPuff, Shadows_Into_Light } from "next/font/google";
 import "./globals.css";
+import SiteHeader from "./components/SiteHeader";
 
 const dynaPuff = DynaPuff({
   variable: "--font-dyna-puff",
@@ -25,7 +26,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${shadows.className} ${shadows.variable} antialiased`}>
+      <body className={`${shadows.className} ${shadows.variable} antialiased`} suppressHydrationWarning>
+        <SiteHeader />
         {children}
       </body>
     </html>

@@ -16,12 +16,6 @@ export default function SiteHeader() {
           <Link href="/" className="hover:underline underline-offset-4">
             Home
           </Link>
-          <Link href="/scenes" className="hover:underline underline-offset-4">
-            Scenes
-          </Link>
-          <Link href="/onboarding" className="hover:underline underline-offset-4">
-            Onboarding
-          </Link>
           <Link href="/parent" className="hover:underline underline-offset-4">
             Parent
           </Link>

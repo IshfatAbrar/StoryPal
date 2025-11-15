@@ -561,12 +561,35 @@ export default function ParentPortal() {
           </div>
         </div>
 
-        <p className="mt-2 text-zinc-700">
-          First, create a Communication Passport for your child. Then design
-          personalized story modules.
-        </p>
+        {passports.length === 0 ? (
+          <div className="mt-12 flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="text-center max-w-md">
+              <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
+                Create a Passport to Continue
+              </h2>
+              <p className="text-lg text-zinc-700 mb-8">
+                Before you can design story modules, you need to create a Communication Passport for your child.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  resetPassportForm();
+                  setShowPassportForm(true);
+                }}
+                className="rounded-xl px-6 py-3 bg-blue-500 text-white hover:bg-blue-600 text-lg font-semibold shadow-md"
+              >
+                Create Passport
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="mt-2 text-zinc-700">
+              First, create a Communication Passport for your child. Then design
+              personalized story modules.
+            </p>
 
-        <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
+            <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-zinc-900">
               Communication Passports
@@ -1769,9 +1792,476 @@ export default function ParentPortal() {
             </ul>
           </div>
         </section>
+          </>
+        )}
+
+        {showPassportForm && passports.length === 0 && (
+          <div className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-900">
+                New Passport
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPassportForm(false);
+                  resetPassportForm();
+                }}
+                className="rounded-lg px-3 py-1.5 text-zinc-700 hover:bg-zinc-100"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Choose avatar
+                </label>
+                <div className="mt-2 grid grid-cols-3 gap-3">
+                  {["bird", "giraffe", "elephant"].map((a) => {
+                    const meta =
+                      a === "elephant"
+                        ? {
+                            bg: "bg-[#4f87d8]",
+                            src: "/elephant.png",
+                            label: "Elephant",
+                          }
+                        : a === "giraffe"
+                        ? {
+                            bg: "bg-[#f97316]",
+                            src: "/jiraffe.png",
+                            label: "Giraffe",
+                          }
+                        : {
+                            bg: "bg-[#34a853]",
+                            src: "/bird.png",
+                            label: "Bird",
+                          };
+                    const isSel = cpAvatar === a;
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setCpAvatar(a)}
+                        className={`rounded-xl px-3 py-4 border ${
+                          isSel ? "border-zinc-900" : "border-zinc-200"
+                        } ${
+                          meta.bg
+                        } text-white flex flex-col items-center justify-center gap-2`}
+                        title={meta.label}
+                      >
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/60 border border-white/50">
+                          <img
+                            src={meta.src}
+                            alt={meta.label}
+                            className="w-16 h-16 object-cover"
+                          />
+                        </div>
+                        <div className="text-sm font-semibold">
+                          {meta.label}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-700">
+                  Child name
+                </label>
+                <input
+                  value={cpName}
+                  onChange={(e) => setCpName(e.target.value)}
+                  placeholder="e.g., Alex"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-700">
+                  Age (optional)
+                </label>
+                <input
+                  value={cpAge}
+                  onChange={(e) => setCpAge(e.target.value)}
+                  placeholder="e.g., 6"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Pronouns
+                </label>
+                <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <input
+                    value={cpPronouns.subject}
+                    onChange={(e) =>
+                      setCpPronouns({
+                        ...cpPronouns,
+                        subject: e.target.value,
+                      })
+                    }
+                    placeholder="Subject (they)"
+                    className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
+                  />
+                  <input
+                    value={cpPronouns.object}
+                    onChange={(e) =>
+                      setCpPronouns({
+                        ...cpPronouns,
+                        object: e.target.value,
+                      })
+                    }
+                    placeholder="Object (them)"
+                    className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
+                  />
+                  <input
+                    value={cpPronouns.possessiveAdjective}
+                    onChange={(e) =>
+                      setCpPronouns({
+                        ...cpPronouns,
+                        possessiveAdjective: e.target.value,
+                      })
+                    }
+                    placeholder="Poss. adj. (their)"
+                    className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
+                  />
+                  <input
+                    value={cpPronouns.possessivePronoun}
+                    onChange={(e) =>
+                      setCpPronouns({
+                        ...cpPronouns,
+                        possessivePronoun: e.target.value,
+                      })
+                    }
+                    placeholder="Poss. pron. (theirs)"
+                    className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Communication Modalities
+                </label>
+                <div className="mt-1 grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
+                  {["AAC", "PECS", "Gestures", "Sign", "Verbal"].map(
+                    (key) => (
+                      <label key={key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={cpModalities[key]}
+                          onChange={(e) =>
+                            setCpModalities({
+                              ...cpModalities,
+                              [key]: e.target.checked,
+                            })
+                          }
+                        />
+                        <span>{key}</span>
+                      </label>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-zinc-700">
+                  Comprehension level
+                </label>
+                <input
+                  value={cpCommunication.comprehensionLevel}
+                  onChange={(e) =>
+                    setCpCommunication({
+                      ...cpCommunication,
+                      comprehensionLevel: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., simple 1-step instructions"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-zinc-700">
+                  Latency
+                </label>
+                <input
+                  value={cpCommunication.latency}
+                  onChange={(e) =>
+                    setCpCommunication({
+                      ...cpCommunication,
+                      latency: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., needs 5–10 seconds"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Yes/No conventions
+                </label>
+                <input
+                  value={cpCommunication.yesNoConventions}
+                  onChange={(e) =>
+                    setCpCommunication({
+                      ...cpCommunication,
+                      yesNoConventions: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., nodding, thumbs up, AAC buttons"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  "Don't understand" signals
+                </label>
+                <input
+                  value={cpCommunication.dontUnderstandSignals}
+                  onChange={(e) =>
+                    setCpCommunication({
+                      ...cpCommunication,
+                      dontUnderstandSignals: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., covers ears, says 'break'"
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Sensory sensitivities
+                </label>
+                <textarea
+                  value={cpSensory.sensitivities}
+                  onChange={(e) =>
+                    setCpSensory({
+                      ...cpSensory,
+                      sensitivities: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Triggers
+                </label>
+                <textarea
+                  value={cpSensory.triggers}
+                  onChange={(e) =>
+                    setCpSensory({ ...cpSensory, triggers: e.target.value })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Regulation strategies
+                </label>
+                <textarea
+                  value={cpSensory.strategies}
+                  onChange={(e) =>
+                    setCpSensory({
+                      ...cpSensory,
+                      strategies: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Safe words / cues
+                </label>
+                <textarea
+                  value={cpSensory.safeWordsCues}
+                  onChange={(e) =>
+                    setCpSensory({
+                      ...cpSensory,
+                      safeWordsCues: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Reinforcement preferences
+                </label>
+                <textarea
+                  value={cpInteraction.reinforcementPreferences}
+                  onChange={(e) =>
+                    setCpInteraction({
+                      ...cpInteraction,
+                      reinforcementPreferences: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Interests
+                </label>
+                <textarea
+                  value={cpInteraction.interests}
+                  onChange={(e) =>
+                    setCpInteraction({
+                      ...cpInteraction,
+                      interests: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Do / Don't
+                </label>
+                <textarea
+                  value={cpInteraction.dosDonts}
+                  onChange={(e) =>
+                    setCpInteraction({
+                      ...cpInteraction,
+                      dosDonts: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Identity language
+                </label>
+                <textarea
+                  value={cpInteraction.identityLanguage}
+                  onChange={(e) =>
+                    setCpInteraction({
+                      ...cpInteraction,
+                      identityLanguage: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Cultural / linguistic context
+                </label>
+                <textarea
+                  value={cpInteraction.culturalContext}
+                  onChange={(e) =>
+                    setCpInteraction({
+                      ...cpInteraction,
+                      culturalContext: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Accessibility needs
+                </label>
+                <textarea
+                  value={cpAccess.accessibilityNeeds}
+                  onChange={(e) =>
+                    setCpAccess({
+                      ...cpAccess,
+                      accessibilityNeeds: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  De-escalation strategies
+                </label>
+                <textarea
+                  value={cpAccess.deescalationStrategies}
+                  onChange={(e) =>
+                    setCpAccess({
+                      ...cpAccess,
+                      deescalationStrategies: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Caregiver notes
+                </label>
+                <textarea
+                  value={cpAccess.caregiverNotes}
+                  onChange={(e) =>
+                    setCpAccess({
+                      ...cpAccess,
+                      caregiverNotes: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-zinc-700">
+                  Consent scope
+                </label>
+                <textarea
+                  value={cpAccess.consentScope}
+                  onChange={(e) =>
+                    setCpAccess({
+                      ...cpAccess,
+                      consentScope: e.target.value,
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={upsertPassport}
+                disabled={!cpName.trim()}
+                className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+              >
+                Save Passport
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPassportForm(false);
+                  resetPassportForm();
+                }}
+                className="rounded-xl px-4 py-2 bg-zinc-100 hover:bg-zinc-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {showPreview && (
+      {showPreview && passports.length > 0 && (
         <StoryPlayer
           moduleDefinition={modulePreview}
           templateContext={{
