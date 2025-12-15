@@ -20,7 +20,24 @@ export default function StoryPlayer({
 }) {
   const title = moduleDefinition?.title || "Story";
   const coverImage = moduleDefinition?.coverImage || "";
-  const steps = useMemo(() => moduleDefinition?.steps || [], [moduleDefinition]);
+  const steps = useMemo(
+    () => moduleDefinition?.steps || [],
+    [moduleDefinition]
+  );
+  const fontPreset = moduleDefinition?.fontPreset || null; // null -> use app font
+  const fontStyle = useMemo(() => {
+    if (!fontPreset) return { fontFamily: "var(--app-font)" };
+    if (fontPreset === "playful") {
+      return { fontFamily: "var(--font-slackey)" };
+    }
+    if (fontPreset === "classic" || fontPreset === "mono") {
+      return { fontFamily: "var(--font-epilogue)" };
+    }
+    if (fontPreset === "hand") {
+      return { fontFamily: "var(--font-shadows-into-light)" };
+    }
+    return { fontFamily: "var(--app-font)" };
+  }, [fontPreset]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [userInputValue, setUserInputValue] = useState("");
@@ -100,10 +117,12 @@ export default function StoryPlayer({
 
   function getByPath(obj, path) {
     if (!obj || !path) return "";
-    return path.split(".").reduce((acc, key) => {
-      if (acc == null) return "";
-      return acc[key];
-    }, obj) ?? "";
+    return (
+      path.split(".").reduce((acc, key) => {
+        if (acc == null) return "";
+        return acc[key];
+      }, obj) ?? ""
+    );
   }
 
   function interpolate(text) {
@@ -145,7 +164,10 @@ export default function StoryPlayer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={handleClose}
+      />
       <div className="relative z-10 w-full max-w-2xl max-h-[90vh] rounded-2xl bg-white shadow-lg animate-[fadeInUp_200ms_ease-out] flex flex-col">
         {coverImage ? (
           <div className="relative w-full aspect-4/3 rounded-t-2xl overflow-hidden">
@@ -159,11 +181,26 @@ export default function StoryPlayer({
             />
           </div>
         ) : null}
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto">
-          <h3 className="text-2xl font-semibold text-zinc-900 mb-4">{interpolate(title)}</h3>
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto" style={fontStyle}>
+          <h3
+            className="text-2xl font-semibold text-zinc-900 mb-4"
+            style={fontStyle}
+          >
+            {interpolate(title)}
+          </h3>
 
           {currentStep && (
             <div className="flex-1 space-y-4">
+              {currentStep.imageUrl && (
+                <div className="w-full rounded-2xl overflow-hidden border border-zinc-200">
+                  <img
+                    src={currentStep.imageUrl}
+                    alt={interpolate(currentStep.message || title)}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
+
               {currentStep.type === "doctor" && (
                 <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
                   <p className="text-zinc-900 text-lg leading-relaxed">
@@ -183,7 +220,9 @@ export default function StoryPlayer({
                     type="text"
                     value={userInputValue}
                     onChange={(e) => setUserInputValue(e.target.value)}
-                    placeholder={interpolate(currentStep.placeholder || "Type your answer...")}
+                    placeholder={interpolate(
+                      currentStep.placeholder || "Type your answer..."
+                    )}
                     className="w-full bg-white/90 border-2 border-zinc-200 rounded-xl px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition-all"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && userInputValue.trim()) {
@@ -195,34 +234,35 @@ export default function StoryPlayer({
                 </div>
               )}
 
-              {currentStep.type === "choice" && Array.isArray(currentStep.options) && (
-                <div className="space-y-3">
-                  <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                    <p className="text-zinc-900 text-lg mb-2">
-                      {interpolate(currentStep.message || "")}
-                    </p>
+              {currentStep.type === "choice" &&
+                Array.isArray(currentStep.options) && (
+                  <div className="space-y-3">
+                    <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                      <p className="text-zinc-900 text-lg mb-2">
+                        {interpolate(currentStep.message || "")}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {currentStep.options.map((option, idx) => {
+                        const label = interpolate(option);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSelectedChoice(label)}
+                            className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                              selectedChoice === label
+                                ? "bg-blue-500 text-white shadow-md"
+                                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {currentStep.options.map((option, idx) => {
-                      const label = interpolate(option);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setSelectedChoice(label)}
-                          className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                            selectedChoice === label
-                              ? "bg-blue-500 text-white shadow-md"
-                              : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                )}
 
               <div className="flex justify-between items-center pt-4 border-t border-zinc-200">
                 <button
@@ -236,7 +276,8 @@ export default function StoryPlayer({
                   type="button"
                   onClick={handleNext}
                   disabled={
-                    (currentStep.type === "user-input" && !userInputValue.trim()) ||
+                    (currentStep.type === "user-input" &&
+                      !userInputValue.trim()) ||
                     (currentStep.type === "choice" && !selectedChoice)
                   }
                   className="rounded-xl px-6 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -251,5 +292,3 @@ export default function StoryPlayer({
     </div>
   );
 }
-
-

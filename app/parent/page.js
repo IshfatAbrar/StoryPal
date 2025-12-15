@@ -1,51 +1,94 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StoryPlayer from "../components/StoryPlayer";
+import SiteFont from "../components/SiteFont";
+import SavedModules from "../components/SavedModules";
+import ReflectionJournal from "../components/ReflectionJournal";
+import CommunicationPassports from "../components/CommunicationPassports";
+import StoryModules from "../components/StoryModules";
+import { auth } from "../lib/firebaseClient";
+import { onAuthStateChanged } from "firebase/auth";
 
 const STORAGE_KEY = "storypal.modules";
 const PASSPORTS_KEY = "storypal.passports";
+const REFLECTIONS_KEY = "storypal.reflections";
 
-function loadModulesFromStorage() {
+function scopedKey(base, uid) {
+  return uid ? `${base}.${uid}` : base;
+}
+
+function loadModulesFromStorage(uid) {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(scopedKey(STORAGE_KEY, uid));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function saveModulesToStorage(modules) {
+function saveModulesToStorage(modules, uid) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(modules));
+  window.localStorage.setItem(
+    scopedKey(STORAGE_KEY, uid),
+    JSON.stringify(modules)
+  );
 }
 
-function loadPassportsFromStorage() {
+function loadPassportsFromStorage(uid) {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(PASSPORTS_KEY);
+    const raw = window.localStorage.getItem(scopedKey(PASSPORTS_KEY, uid));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function savePassportsToStorage(passports) {
+function savePassportsToStorage(passports, uid) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(PASSPORTS_KEY, JSON.stringify(passports));
+  window.localStorage.setItem(
+    scopedKey(PASSPORTS_KEY, uid),
+    JSON.stringify(passports)
+  );
+}
+
+function loadReflectionsFromStorage(uid) {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(scopedKey(REFLECTIONS_KEY, uid));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveReflectionsToStorage(reflections, uid) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    scopedKey(REFLECTIONS_KEY, uid),
+    JSON.stringify(reflections)
+  );
 }
 
 function createEmptyStep(stepType) {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   if (stepType === "doctor") {
-    return { id, type: "doctor", message: "" };
+    return { id, type: "doctor", message: "", imageUrl: "" };
   }
   if (stepType === "user-input") {
-    return { id, type: "user-input", message: "", placeholder: "" };
+    return {
+      id,
+      type: "user-input",
+      message: "",
+      placeholder: "",
+      imageUrl: "",
+    };
   }
-  return { id, type: "choice", message: "", options: [""] };
+  return { id, type: "choice", message: "", options: [""], imageUrl: "" };
 }
 
 function validateModule(moduleDef) {
@@ -65,289 +108,183 @@ function validateModule(moduleDef) {
   return true;
 }
 
+// Simple pregenerated example story modules shown by default
+const DEFAULT_MODULES = [
+  {
+    id: "demo-calm-breathing",
+    title: "Calm Breathing Mission",
+    coverImage: "",
+    fontPreset: "classic",
+    childId: null,
+    stageDesign: null,
+    steps: [
+      {
+        type: "doctor",
+        message:
+          "Hi {{child.name}}! Today our mission is to help your body feel calmer with three sparkle breaths.",
+      },
+      {
+        type: "doctor",
+        message:
+          "First, put one hand on your chest and one hand on your tummy. Feel them move as you breathe in and out.",
+      },
+      {
+        type: "choice",
+        message: "How does your body feel right now?",
+        options: ["A little wiggly", "Very wiggly", "Pretty calm"],
+      },
+      {
+        type: "doctor",
+        message:
+          "Let’s try three slow sparkle breaths together. Breathe in through your nose… and blow the sparkles out gently.",
+      },
+    ],
+  },
+  {
+    id: "demo-school-wave",
+    title: "Brave School Wave",
+    coverImage: "",
+    fontPreset: "hand",
+    childId: null,
+    stageDesign: null,
+    steps: [
+      {
+        type: "doctor",
+        message:
+          "StoryPal time! Today we practice a brave wave for when you arrive at school.",
+      },
+      {
+        type: "doctor",
+        message:
+          "Imagine you are standing by the classroom door. Your teacher smiles and says your name.",
+      },
+      {
+        type: "choice",
+        message: "What feels like a good first step?",
+        options: [
+          "A tiny wave with your hand",
+          "Just looking and nodding",
+          "Holding your grown‑up’s hand and waving together",
+        ],
+      },
+      {
+        type: "user-input",
+        message:
+          "Together, choose one brave micro‑step for tomorrow morning. Type it here as your mission.",
+        placeholder:
+          "e.g., I will look at the teacher and lift my hand a little.",
+      },
+    ],
+  },
+];
+
+// Static interactive training module for parents
+const PARENT_TRAINING_MODULE = {
+  id: "parent-training",
+  title: "Interactive Parent Training: The Science of StoryPal & Co‑Action",
+  coverImage: "",
+  fontPreset: "classic",
+  steps: [
+    {
+      type: "doctor",
+      message:
+        "Welcome to StoryPal! This short training shows you how StoryPal uses simple stories and visuals to support your child's social and emotional growth.",
+    },
+    {
+      type: "doctor",
+      message:
+        "StoryPal is built on narrative therapy, co‑regulation, and neurodiversity‑affirming practice. Instead of 'fixing' your child, we celebrate their strengths and give them scaffolds for tricky moments.",
+    },
+    {
+      type: "doctor",
+      message:
+        'One key idea is "Co‑Action": you and your child acting together. You model the skill, co‑play the action, and then gradually hand more control to your child when they feel ready.',
+    },
+    {
+      type: "choice",
+      message: "How familiar does Co‑Action feel to you right now?",
+      options: [
+        "Very new concept for me",
+        "I’ve heard of similar ideas",
+        "I already use something like this",
+      ],
+    },
+    {
+      type: "doctor",
+      message:
+        "In StoryPal, each step is a small Co‑Action moment: you read or listen together, pause to check in, and sometimes practice the move in real life—a wave, a deep breath, or asking for help.",
+    },
+    {
+      type: "user-input",
+      message:
+        "Think of one everyday situation where you’d like StoryPal to help your child. Type a quick note so you remember it later.",
+      placeholder: "e.g., saying hello at school drop‑off, waiting in a line…",
+    },
+    {
+      type: "doctor",
+      message:
+        'Beautiful. As you build modules, keep coming back to Co‑Action: "How can we try this together, side‑by‑side, in a way that feels safe and playful?" You’re not alone—StoryPal is here to coach you step by step.',
+    },
+  ],
+};
+
 export default function ParentPortal() {
+  const router = useRouter();
   const [modules, setModules] = useState([]);
   const [passports, setPassports] = useState([]);
   const [selectedPassportId, setSelectedPassportId] = useState(null);
-
-  // Passport form state
-  const [cpName, setCpName] = useState("");
-  const [cpAge, setCpAge] = useState("");
-  const [cpAvatar, setCpAvatar] = useState("bird");
-  const [cpPronouns, setCpPronouns] = useState({
-    subject: "",
-    object: "",
-    possessiveAdjective: "",
-    possessivePronoun: "",
-  });
-  const [cpModalities, setCpModalities] = useState({
-    AAC: false,
-    PECS: false,
-    Gestures: false,
-    Sign: false,
-    Verbal: false,
-  });
-  const [cpCommunication, setCpCommunication] = useState({
-    comprehensionLevel: "",
-    latency: "",
-    yesNoConventions: "",
-    dontUnderstandSignals: "",
-  });
-  const [cpSensory, setCpSensory] = useState({
-    sensitivities: "",
-    triggers: "",
-    strategies: "",
-    safeWordsCues: "",
-  });
-  const [cpInteraction, setCpInteraction] = useState({
-    reinforcementPreferences: "",
-    interests: "",
-    dosDonts: "",
-    identityLanguage: "",
-    culturalContext: "",
-  });
-  const [cpAccess, setCpAccess] = useState({
-    accessibilityNeeds: "",
-    deescalationStrategies: "",
-    caregiverNotes: "",
-    consentScope: "",
-  });
-  const [editingPassportId, setEditingPassportId] = useState(null);
-  const [showPassportForm, setShowPassportForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [coverImage, setCoverImage] = useState("");
-  const [steps, setSteps] = useState([]);
-  const [editingId, setEditingId] = useState(null);
+  // Reflection Journal state
+  const [reflections, setReflections] = useState([]);
+  // Story module editing state
+  const [editingModuleId, setEditingModuleId] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  // NT-UX stage-based scene design
-  const [activeStage, setActiveStage] = useState(1);
-  const [stageFraming, setStageFraming] = useState({
-    focus: "greeting",
-    scenario: "school",
-    tone: "brave",
-    parentGoal: "",
-  });
-  const [stageImmersion, setStageImmersion] = useState({
-    feeling: "shy",
-    coplay: "wave",
-    imagery: "",
-  });
-  const [stageReflection, setStageReflection] = useState({
-    tried: "",
-    confidence: "Medium",
-    comfort: "Medium",
-  });
-  const [stageContinuity, setStageContinuity] = useState({
-    nextArc: "school-arc",
-    cadence: "Every 2 days",
-    badge: "bravery",
-  });
+  const [previewModule, setPreviewModule] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Require authenticated parent
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setAuthReady(false);
+        setAuthChecking(false);
+        setCurrentUser(null);
+        router.replace("/parent/auth");
+        return;
+      }
+      setCurrentUser(user);
+      setAuthReady(true);
+      setAuthChecking(false);
+    });
+    return () => unsub();
+  }, [router]);
 
   useEffect(() => {
-    setModules(loadModulesFromStorage());
-    const loadedPassports = loadPassportsFromStorage();
+    if (!authReady || !currentUser) return;
+    const uid = currentUser.uid;
+    const storedModules = loadModulesFromStorage(uid) || [];
+    // Ensure the two demo modules are present at least once
+    const missingDefaults = DEFAULT_MODULES.filter(
+      (demo) => !storedModules.some((m) => m.id === demo.id)
+    );
+    const mergedModules =
+      missingDefaults.length > 0
+        ? [...storedModules, ...missingDefaults]
+        : storedModules;
+    setModules(mergedModules);
+    if (missingDefaults.length > 0) {
+      saveModulesToStorage(mergedModules, uid);
+    }
+    const loadedPassports = loadPassportsFromStorage(uid);
     setPassports(loadedPassports);
     if (loadedPassports.length > 0) {
       setSelectedPassportId(loadedPassports[0].id);
     }
-  }, []);
+    setReflections(loadReflectionsFromStorage(uid));
+  }, [authReady, currentUser]);
 
-  function buildStageContext() {
-    return {
-      framing: { ...stageFraming },
-      immersion: { ...stageImmersion },
-      reflection: { ...stageReflection },
-      continuity: { ...stageContinuity },
-    };
-  }
-
-  function generateStepsFromStages() {
-    const s = buildStageContext();
-    const generated = [
-      {
-        type: "doctor",
-        message:
-          "Hi {{child.name}}! Today we're focusing on {{stages.framing.focus}} at {{stages.framing.scenario}}. We'll use our {{stages.framing.tone}} superpower.",
-      },
-      {
-        type: "doctor",
-        message:
-          "Sometimes starting can feel new. {{child.name}} {{stages.immersion.feeling}}. Can we {{stages.immersion.coplay}} together?",
-      },
-      s.immersion.imagery
-        ? {
-            type: "doctor",
-            message: "Look around: {{stages.immersion.imagery}}",
-          }
-        : null,
-      {
-        type: "choice",
-        message: "Ready to try it?",
-        options: ["Yes, let's try!", "Not yet", "Let's watch once first"],
-      },
-      {
-        type: "doctor",
-        message:
-          "Great effort! You earned a {{stages.continuity.badge}} badge. Next time, we'll explore {{stages.continuity.nextArc}}.",
-      },
-    ]
-      .filter(Boolean)
-      .map((step) => {
-        // Create a unique-id step using existing helper shape per type
-        const base =
-          step.type === "doctor"
-            ? createEmptyStep("doctor")
-            : step.type === "user-input"
-            ? createEmptyStep("user-input")
-            : createEmptyStep("choice");
-        return { ...base, ...step };
-      });
-
-    // Append generated steps rather than overwrite existing ones
-    setSteps((prev) => [...prev, ...generated]);
-  }
-
-  function serializeModalities(state) {
-    return Object.entries(state)
-      .filter(([, v]) => !!v)
-      .map(([k]) => k);
-  }
-
-  function resetPassportForm() {
-    setCpName("");
-    setCpAge("");
-    setCpAvatar("bird");
-    setCpPronouns({
-      subject: "",
-      object: "",
-      possessiveAdjective: "",
-      possessivePronoun: "",
-    });
-    setCpModalities({
-      AAC: false,
-      PECS: false,
-      Gestures: false,
-      Sign: false,
-      Verbal: false,
-    });
-    setCpCommunication({
-      comprehensionLevel: "",
-      latency: "",
-      yesNoConventions: "",
-      dontUnderstandSignals: "",
-    });
-    setCpSensory({
-      sensitivities: "",
-      triggers: "",
-      strategies: "",
-      safeWordsCues: "",
-    });
-    setCpInteraction({
-      reinforcementPreferences: "",
-      interests: "",
-      dosDonts: "",
-      identityLanguage: "",
-      culturalContext: "",
-    });
-    setCpAccess({
-      accessibilityNeeds: "",
-      deescalationStrategies: "",
-      caregiverNotes: "",
-      consentScope: "",
-    });
-    setEditingPassportId(null);
-  }
-
-  function upsertPassport() {
-    if (!cpName.trim()) return;
-    const passport = {
-      id: editingPassportId || `${Date.now()}`,
-      childName: cpName.trim(),
-      age: cpAge.trim(),
-      avatar: cpAvatar || "bird",
-      pronouns: { ...cpPronouns },
-      communication: {
-        modalities: serializeModalities(cpModalities),
-        comprehensionLevel: cpCommunication.comprehensionLevel,
-        latency: cpCommunication.latency,
-        yesNoConventions: cpCommunication.yesNoConventions,
-        dontUnderstandSignals: cpCommunication.dontUnderstandSignals,
-      },
-      sensory: { ...cpSensory },
-      interaction: { ...cpInteraction },
-      accessSafety: { ...cpAccess },
-    };
-    const next = [...passports];
-    const idx = next.findIndex((p) => p.id === passport.id);
-    if (idx >= 0) next[idx] = passport;
-    else next.unshift(passport);
-
-    setPassports(next);
-    savePassportsToStorage(next);
-    setSelectedPassportId(passport.id);
-    setShowPassportForm(false);
-    resetPassportForm();
-  }
-
-  function editPassport(p) {
-    setEditingPassportId(p.id);
-    setCpName(p.childName || "");
-    setCpAge(p.age || "");
-    setCpAvatar(p.avatar || "bird");
-    setCpPronouns({
-      subject: p.pronouns?.subject || "",
-      object: p.pronouns?.object || "",
-      possessiveAdjective: p.pronouns?.possessiveAdjective || "",
-      possessivePronoun: p.pronouns?.possessivePronoun || "",
-    });
-    const modalities = p.communication?.modalities || [];
-    setCpModalities({
-      AAC: modalities.includes("AAC"),
-      PECS: modalities.includes("PECS"),
-      Gestures: modalities.includes("Gestures"),
-      Sign: modalities.includes("Sign"),
-      Verbal: modalities.includes("Verbal"),
-    });
-    setCpCommunication({
-      comprehensionLevel: p.communication?.comprehensionLevel || "",
-      latency: p.communication?.latency || "",
-      yesNoConventions: p.communication?.yesNoConventions || "",
-      dontUnderstandSignals: p.communication?.dontUnderstandSignals || "",
-    });
-    setCpSensory({
-      sensitivities: p.sensory?.sensitivities || "",
-      triggers: p.sensory?.triggers || "",
-      strategies: p.sensory?.strategies || "",
-      safeWordsCues: p.sensory?.safeWordsCues || "",
-    });
-    setCpInteraction({
-      reinforcementPreferences: p.interaction?.reinforcementPreferences || "",
-      interests: p.interaction?.interests || "",
-      dosDonts: p.interaction?.dosDonts || "",
-      identityLanguage: p.interaction?.identityLanguage || "",
-      culturalContext: p.interaction?.culturalContext || "",
-    });
-    setCpAccess({
-      accessibilityNeeds: p.accessSafety?.accessibilityNeeds || "",
-      deescalationStrategies: p.accessSafety?.deescalationStrategies || "",
-      caregiverNotes: p.accessSafety?.caregiverNotes || "",
-      consentScope: p.accessSafety?.consentScope || "",
-    });
-    setShowPassportForm(true);
-  }
-
-  function deletePassport(id) {
-    const next = passports.filter((p) => p.id !== id);
-    setPassports(next);
-    savePassportsToStorage(next);
-    if (selectedPassportId === id) {
-      setSelectedPassportId(next[0]?.id || null);
-    }
-    if (editingPassportId === id) {
-      resetPassportForm();
-      setShowPassportForm(false);
-    }
-  }
+  const showAuthGate = authChecking || !authReady;
 
   function buildContextFromPassport(p) {
     if (!p) return {};
@@ -392,22 +329,16 @@ export default function ParentPortal() {
     [passports, selectedPassportId]
   );
 
-  function upsertModule() {
-    const moduleDefinition = {
-      id: editingId || `${Date.now()}`,
-      title: title.trim(),
-      coverImage: coverImage.trim(),
-      steps,
-      childId: selectedPassportId || null,
-      stageDesign: {
-        framing: { ...stageFraming },
-        immersion: { ...stageImmersion },
-        reflection: { ...stageReflection },
-        continuity: { ...stageContinuity },
-      },
-    };
-    if (!validateModule(moduleDefinition)) return;
+  function deleteModule(id) {
+    const next = modules.filter((m) => m.id !== id);
+    setModules(next);
+    saveModulesToStorage(next, currentUser?.uid);
+    if (editingModuleId === id) {
+      setEditingModuleId(null);
+    }
+  }
 
+  function handleModuleSave(moduleDefinition) {
     const next = [...modules];
     const existingIdx = next.findIndex((m) => m.id === moduleDefinition.id);
     if (existingIdx >= 0) {
@@ -416,133 +347,33 @@ export default function ParentPortal() {
       next.unshift(moduleDefinition);
     }
     setModules(next);
-    saveModulesToStorage(next);
-    resetForm();
+    saveModulesToStorage(next, currentUser?.uid);
+    setEditingModuleId(null);
   }
 
-  function resetForm() {
-    setTitle("");
-    setCoverImage("");
-    setSteps([]);
-    setEditingId(null);
+  function handleModulePreview(modulePreview) {
+    setPreviewModule(modulePreview);
+    setShowPreview(true);
   }
 
-  function editModule(mod) {
-    setEditingId(mod.id);
-    setTitle(mod.title || "");
-    setCoverImage(mod.coverImage || "");
-    setSteps(Array.isArray(mod.steps) ? mod.steps : []);
-    if (mod.stageDesign) {
-      setStageFraming(
-        mod.stageDesign.framing || {
-          focus: "greeting",
-          scenario: "school",
-          tone: "brave",
-          parentGoal: "",
-        }
-      );
-      setStageImmersion(
-        mod.stageDesign.immersion || {
-          feeling: "shy",
-          coplay: "wave",
-          imagery: "",
-        }
-      );
-      setStageReflection(
-        mod.stageDesign.reflection || {
-          tried: "",
-          confidence: "Medium",
-          comfort: "Medium",
-        }
-      );
-      setStageContinuity(
-        mod.stageDesign.continuity || {
-          nextArc: "school-arc",
-          cadence: "Every 2 days",
-          badge: "bravery",
-        }
-      );
-    }
+  function handleModuleEdit(module) {
+    setEditingModuleId(module.id);
   }
 
-  function deleteModule(id) {
-    const next = modules.filter((m) => m.id !== id);
-    setModules(next);
-    saveModulesToStorage(next);
-    if (editingId === id) resetForm();
-  }
-
-  function addStep(stepType) {
-    setSteps((prev) => [...prev, createEmptyStep(stepType)]);
-  }
-
-  function deleteStep(stepId) {
-    setSteps((prev) => prev.filter((s) => s.id !== stepId));
-  }
-
-  function moveStep(stepId, direction) {
-    setSteps((prev) => {
-      const idx = prev.findIndex((s) => s.id === stepId);
-      if (idx < 0) return prev;
-      const target = direction === "up" ? idx - 1 : idx + 1;
-      if (target < 0 || target >= prev.length) return prev;
-      const copy = [...prev];
-      const [item] = copy.splice(idx, 1);
-      copy.splice(target, 0, item);
-      return copy;
-    });
-  }
-
-  function updateStep(stepId, field, value) {
-    setSteps((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, [field]: value } : s))
+  if (showAuthGate) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-linear-to-br from-rose-50 via-white to-blue-50">
+        <div className="text-center space-y-2">
+          <div className="text-lg font-semibold text-zinc-800">
+            Checking parent sign-in…
+          </div>
+          <div className="text-sm text-zinc-600">
+            If this takes long, please sign in again.
+          </div>
+        </div>
+      </main>
     );
   }
-
-  function updateChoiceOption(stepId, optionIndex, value) {
-    setSteps((prev) =>
-      prev.map((s) => {
-        if (s.id !== stepId) return s;
-        const options = Array.isArray(s.options) ? [...s.options] : [];
-        options[optionIndex] = value;
-        return { ...s, options };
-      })
-    );
-  }
-
-  function addChoiceOption(stepId) {
-    setSteps((prev) =>
-      prev.map((s) => {
-        if (s.id !== stepId) return s;
-        const options = Array.isArray(s.options) ? [...s.options, ""] : [""];
-        return { ...s, options };
-      })
-    );
-  }
-
-  function removeChoiceOption(stepId, optionIndex) {
-    setSteps((prev) =>
-      prev.map((s) => {
-        if (s.id !== stepId) return s;
-        const options = (Array.isArray(s.options) ? s.options : []).filter(
-          (_, i) => i !== optionIndex
-        );
-        return { ...s, options };
-      })
-    );
-  }
-
-  const modulePreview = useMemo(
-    () => ({
-      id: editingId || "preview",
-      title: title || "Untitled Story",
-      coverImage,
-      steps,
-    }),
-    [editingId, title, coverImage, steps]
-  );
-
-  const isValid = validateModule(modulePreview);
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">
@@ -551,1251 +382,134 @@ export default function ParentPortal() {
           <h1 className="text-4xl font-semibold text-zinc-900">
             Parent Portal
           </h1>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-blue-600 hover:underline">
-              Home
-            </Link>
-            <Link href="/child" className="text-blue-600 hover:underline">
-              Child Portal
-            </Link>
-          </div>
         </div>
 
-        {passports.length === 0 ? (
-          <div className="mt-12 flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="text-center max-w-md">
-              <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
-                Create a Passport to Continue
-              </h2>
-              <p className="text-lg text-zinc-700 mb-8">
-                Before you can design story modules, you need to create a Communication Passport for your child.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  resetPassportForm();
-                  setShowPassportForm(true);
-                }}
-                className="rounded-xl px-6 py-3 bg-blue-500 text-white hover:bg-blue-600 text-lg font-semibold shadow-md"
-              >
-                Create Passport
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <p className="mt-2 text-zinc-700">
-              First, create a Communication Passport for your child. Then design
-              personalized story modules.
-            </p>
-
-            <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-zinc-900">
-              Communication Passports
-            </h2>
-            <button
-              type="button"
-              onClick={() => {
-                resetPassportForm();
-                setShowPassportForm(true);
-              }}
-              className="rounded-xl px-3 py-2 bg-blue-500 text-white hover:bg-blue-600"
-            >
-              New Passport
-            </button>
-          </div>
-
-          <div className="mt-4 flex flex-col lg:flex-row gap-6">
-            <div className="lg:w-1/2">
-              <label className="block text-sm text-zinc-700">
-                Select child
-              </label>
-              <div className="mt-2 flex items-center gap-3">
-                <select
-                  value={selectedPassportId || ""}
-                  onChange={(e) =>
-                    setSelectedPassportId(e.target.value || null)
-                  }
-                  className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                >
-                  <option value="">— Choose —</option>
-                  {passports.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.childName}
-                    </option>
-                  ))}
-                </select>
-                {selectedPassport && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => editPassport(selectedPassport)}
-                      className="rounded-lg px-3 py-2 bg-zinc-100 hover:bg-zinc-200"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deletePassport(selectedPassport.id)}
-                      className="rounded-lg px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-              {passports.length === 0 && (
-                <p className="mt-2 text-sm text-zinc-600">
-                  No passports yet. Create one to get started.
-                </p>
-              )}
-              {passports.length > 0 && (
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {passports.map((p) => {
-                    const meta =
-                      p.avatar === "elephant"
-                        ? { bg: "bg-[#4f87d8]", src: "/elephant.png" }
-                        : p.avatar === "giraffe"
-                        ? { bg: "bg-[#f97316]", src: "/jiraffe.png" }
-                        : { bg: "bg-[#34a853]", src: "/bird.png" };
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setSelectedPassportId(p.id)}
-                        className={`group relative rounded-2xl overflow-hidden w-[200px] ${meta.bg} h-[300px] text-white shadow-sm hover:shadow-md transition-shadow`}
-                        title="Select passport"
-                      >
-                        <div className="flex justify-center items-center h-full w-full">
-                          <img
-                            src={meta.src}
-                            alt={p.avatar}
-                            className="w-[60%] h-auto object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.25)] mb-16"
-                          />
-                        </div>
-                        <div className="absolute left-8 bottom-4 font-bold text-4xl leading-tight w-[60%] drop-shadow-[0_2px_6px_rgba(0,0,0,0.25)] text-white">
-                          {p.childName}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {showPassportForm && (
-              <div className="lg:flex-1 rounded-xl border border-zinc-200 p-4 bg-white">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-zinc-900">
-                    {editingPassportId ? "Edit Passport" : "New Passport"}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPassportForm(false);
-                      resetPassportForm();
-                    }}
-                    className="rounded-lg px-3 py-1.5 text-zinc-700 hover:bg-zinc-100"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Choose avatar
-                    </label>
-                    <div className="mt-2 grid grid-cols-3 gap-3">
-                      {["bird", "giraffe", "elephant"].map((a) => {
-                        const meta =
-                          a === "elephant"
-                            ? {
-                                bg: "bg-[#4f87d8]",
-                                src: "/elephant.png",
-                                label: "Elephant",
-                              }
-                            : a === "giraffe"
-                            ? {
-                                bg: "bg-[#f97316]",
-                                src: "/jiraffe.png",
-                                label: "Giraffe",
-                              }
-                            : {
-                                bg: "bg-[#34a853]",
-                                src: "/bird.png",
-                                label: "Bird",
-                              };
-                        const isSel = cpAvatar === a;
-                        return (
-                          <button
-                            key={a}
-                            type="button"
-                            onClick={() => setCpAvatar(a)}
-                            className={`rounded-xl px-3 py-4 border ${
-                              isSel ? "border-zinc-900" : "border-zinc-200"
-                            } ${
-                              meta.bg
-                            } text-white flex flex-col items-center justify-center gap-2`}
-                            title={meta.label}
-                          >
-                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/60 border border-white/50">
-                              <img
-                                src={meta.src}
-                                alt={meta.label}
-                                className="w-16 h-16 object-cover"
-                              />
-                            </div>
-                            <div className="text-sm font-semibold">
-                              {meta.label}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Child name
-                    </label>
-                    <input
-                      value={cpName}
-                      onChange={(e) => setCpName(e.target.value)}
-                      placeholder="e.g., Alex"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Age (optional)
-                    </label>
-                    <input
-                      value={cpAge}
-                      onChange={(e) => setCpAge(e.target.value)}
-                      placeholder="e.g., 6"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Pronouns
-                    </label>
-                    <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
-                      <input
-                        value={cpPronouns.subject}
-                        onChange={(e) =>
-                          setCpPronouns({
-                            ...cpPronouns,
-                            subject: e.target.value,
-                          })
-                        }
-                        placeholder="Subject (they)"
-                        className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
-                      />
-                      <input
-                        value={cpPronouns.object}
-                        onChange={(e) =>
-                          setCpPronouns({
-                            ...cpPronouns,
-                            object: e.target.value,
-                          })
-                        }
-                        placeholder="Object (them)"
-                        className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
-                      />
-                      <input
-                        value={cpPronouns.possessiveAdjective}
-                        onChange={(e) =>
-                          setCpPronouns({
-                            ...cpPronouns,
-                            possessiveAdjective: e.target.value,
-                          })
-                        }
-                        placeholder="Poss. adj. (their)"
-                        className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
-                      />
-                      <input
-                        value={cpPronouns.possessivePronoun}
-                        onChange={(e) =>
-                          setCpPronouns({
-                            ...cpPronouns,
-                            possessivePronoun: e.target.value,
-                          })
-                        }
-                        placeholder="Poss. pron. (theirs)"
-                        className="bg-white/90 border border-zinc-200 rounded-xl px-3 py-2"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Communication Modalities
-                    </label>
-                    <div className="mt-1 grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
-                      {["AAC", "PECS", "Gestures", "Sign", "Verbal"].map(
-                        (key) => (
-                          <label key={key} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={cpModalities[key]}
-                              onChange={(e) =>
-                                setCpModalities({
-                                  ...cpModalities,
-                                  [key]: e.target.checked,
-                                })
-                              }
-                            />
-                            <span>{key}</span>
-                          </label>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Comprehension level
-                    </label>
-                    <input
-                      value={cpCommunication.comprehensionLevel}
-                      onChange={(e) =>
-                        setCpCommunication({
-                          ...cpCommunication,
-                          comprehensionLevel: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., simple 1-step instructions"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Latency
-                    </label>
-                    <input
-                      value={cpCommunication.latency}
-                      onChange={(e) =>
-                        setCpCommunication({
-                          ...cpCommunication,
-                          latency: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., needs 5–10 seconds"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Yes/No conventions
-                    </label>
-                    <input
-                      value={cpCommunication.yesNoConventions}
-                      onChange={(e) =>
-                        setCpCommunication({
-                          ...cpCommunication,
-                          yesNoConventions: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., nodding, thumbs up, AAC buttons"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      “Don't understand” signals
-                    </label>
-                    <input
-                      value={cpCommunication.dontUnderstandSignals}
-                      onChange={(e) =>
-                        setCpCommunication({
-                          ...cpCommunication,
-                          dontUnderstandSignals: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., covers ears, says 'break'"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Sensory sensitivities
-                    </label>
-                    <textarea
-                      value={cpSensory.sensitivities}
-                      onChange={(e) =>
-                        setCpSensory({
-                          ...cpSensory,
-                          sensitivities: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Triggers
-                    </label>
-                    <textarea
-                      value={cpSensory.triggers}
-                      onChange={(e) =>
-                        setCpSensory({ ...cpSensory, triggers: e.target.value })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Regulation strategies
-                    </label>
-                    <textarea
-                      value={cpSensory.strategies}
-                      onChange={(e) =>
-                        setCpSensory({
-                          ...cpSensory,
-                          strategies: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Safe words / cues
-                    </label>
-                    <textarea
-                      value={cpSensory.safeWordsCues}
-                      onChange={(e) =>
-                        setCpSensory({
-                          ...cpSensory,
-                          safeWordsCues: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Reinforcement preferences
-                    </label>
-                    <textarea
-                      value={cpInteraction.reinforcementPreferences}
-                      onChange={(e) =>
-                        setCpInteraction({
-                          ...cpInteraction,
-                          reinforcementPreferences: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Interests
-                    </label>
-                    <textarea
-                      value={cpInteraction.interests}
-                      onChange={(e) =>
-                        setCpInteraction({
-                          ...cpInteraction,
-                          interests: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Do / Don't
-                    </label>
-                    <textarea
-                      value={cpInteraction.dosDonts}
-                      onChange={(e) =>
-                        setCpInteraction({
-                          ...cpInteraction,
-                          dosDonts: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Identity language
-                    </label>
-                    <textarea
-                      value={cpInteraction.identityLanguage}
-                      onChange={(e) =>
-                        setCpInteraction({
-                          ...cpInteraction,
-                          identityLanguage: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Cultural / linguistic context
-                    </label>
-                    <textarea
-                      value={cpInteraction.culturalContext}
-                      onChange={(e) =>
-                        setCpInteraction({
-                          ...cpInteraction,
-                          culturalContext: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Accessibility needs
-                    </label>
-                    <textarea
-                      value={cpAccess.accessibilityNeeds}
-                      onChange={(e) =>
-                        setCpAccess({
-                          ...cpAccess,
-                          accessibilityNeeds: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      De-escalation strategies
-                    </label>
-                    <textarea
-                      value={cpAccess.deescalationStrategies}
-                      onChange={(e) =>
-                        setCpAccess({
-                          ...cpAccess,
-                          deescalationStrategies: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Caregiver notes
-                    </label>
-                    <textarea
-                      value={cpAccess.caregiverNotes}
-                      onChange={(e) =>
-                        setCpAccess({
-                          ...cpAccess,
-                          caregiverNotes: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Consent scope
-                    </label>
-                    <textarea
-                      value={cpAccess.consentScope}
-                      onChange={(e) =>
-                        setCpAccess({
-                          ...cpAccess,
-                          consentScope: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={upsertPassport}
-                    disabled={!cpName.trim()}
-                    className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-                  >
-                    {editingPassportId ? "Update Passport" : "Save Passport"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPassportForm(false);
-                      resetPassportForm();
-                    }}
-                    className="rounded-xl px-4 py-2 bg-zinc-100 hover:bg-zinc-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="mt-3 text-sm text-zinc-600">
-            Tip: Use tokens like {"{{child.name}}"},{" "}
-            {"{{child.pronouns.subject}}"}, {"{{preferences.interests}}"}, and
-            stage tokens like {"{{stages.framing.focus}}"},{" "}
-            {"{{stages.immersion.coplay}}"}.
-          </div>
-        </section>
-
-        {/* Scene Design — NT‑UX Stages (structured) */}
+        {/* Interactive Parent Training – always available */}
         <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-zinc-900">
-              Scene Design — NT‑UX Stages
-            </h2>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              { n: 1, label: "1. Framing" },
-              { n: 2, label: "2. Immersion" },
-              { n: 3, label: "3. Reflection" },
-              { n: 4, label: "4. Continuity" },
-            ].map((tab) => (
-              <button
-                key={tab.n}
-                type="button"
-                onClick={() => setActiveStage(tab.n)}
-                className={`px-4 py-2 rounded-full text-sm border ${
-                  activeStage === tab.n
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            {activeStage === 1 && (
-              <div className="rounded-xl border border-zinc-200 p-4 bg-white space-y-4">
-                <h3 className="text-lg font-semibold text-zinc-900">
-                  Stage 1 · Narrative Framing
-                </h3>
-                <p className="text-sm text-zinc-600">
-                  Personalize the setup and align with today's goal.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Today's focus
-                    </label>
-                    <select
-                      value={stageFraming.focus}
-                      onChange={(e) =>
-                        setStageFraming({
-                          ...stageFraming,
-                          focus: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="greeting">Greeting / Saying hello</option>
-                      <option value="sharing">Sharing / Turn‑taking</option>
-                      <option value="routine">Morning routine</option>
-                      <option value="sensory">
-                        Managing sensory surprises
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Scenario
-                    </label>
-                    <select
-                      value={stageFraming.scenario}
-                      onChange={(e) =>
-                        setStageFraming({
-                          ...stageFraming,
-                          scenario: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="school">School: arrival and wave</option>
-                      <option value="playdate">
-                        Playdate: meet a new friend
-                      </option>
-                      <option value="store">
-                        Grocery store: checkout line
-                      </option>
-                      <option value="clinic">Clinic: waiting room</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Desired tone
-                    </label>
-                    <select
-                      value={stageFraming.tone}
-                      onChange={(e) =>
-                        setStageFraming({
-                          ...stageFraming,
-                          tone: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="brave">Encouraging & brave</option>
-                      <option value="calm">Calm & soothing</option>
-                      <option value="curious">Curious & playful</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Parent goal (optional)
-                    </label>
-                    <input
-                      value={stageFraming.parentGoal}
-                      onChange={(e) =>
-                        setStageFraming({
-                          ...stageFraming,
-                          parentGoal: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Practice waving back to a classmate"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeStage === 2 && (
-              <div className="rounded-xl border border-zinc-200 p-4 bg-white space-y-4">
-                <h3 className="text-lg font-semibold text-zinc-900">
-                  Stage 2 · Immersion
-                </h3>
-                <p className="text-sm text-zinc-600">
-                  Guide imagery and perspective‑taking; co‑play the avatar.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Current feeling
-                    </label>
-                    <select
-                      value={stageImmersion.feeling}
-                      onChange={(e) =>
-                        setStageImmersion({
-                          ...stageImmersion,
-                          feeling: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="shy">Shy</option>
-                      <option value="excited">Excited</option>
-                      <option value="nervous">Nervous</option>
-                      <option value="proud">Proud</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Co‑play prompt
-                    </label>
-                    <select
-                      value={stageImmersion.coplay}
-                      onChange={(e) =>
-                        setStageImmersion({
-                          ...stageImmersion,
-                          coplay: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="wave">Practice a superhero wave</option>
-                      <option value="share">
-                        Offer a toy and say “your turn”
-                      </option>
-                      <option value="count">Count to three together</option>
-                      <option value="breathe">Do a 3‑breath sparkle</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-zinc-700">
-                      Imagery line (optional)
-                    </label>
-                    <textarea
-                      value={stageImmersion.imagery}
-                      onChange={(e) =>
-                        setStageImmersion({
-                          ...stageImmersion,
-                          imagery: e.target.value,
-                        })
-                      }
-                      placeholder="Describe what your child sees (e.g., 'Blue backpack, Mia smiles and waves')."
-                      rows={2}
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeStage === 3 && (
-              <div className="rounded-xl border border-zinc-200 p-4 bg-white space-y-4">
-                <h3 className="text-lg font-semibold text-zinc-900">
-                  Stage 3 · Reflection
-                </h3>
-                <p className="text-sm text-zinc-600">
-                  Connect the story to real‑life experiences and log progress.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      What did your child try?
-                    </label>
-                    <input
-                      value={stageReflection.tried}
-                      onChange={(e) =>
-                        setStageReflection({
-                          ...stageReflection,
-                          tried: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Waved back and smiled"
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Parent confidence
-                    </label>
-                    <select
-                      value={stageReflection.confidence}
-                      onChange={(e) =>
-                        setStageReflection({
-                          ...stageReflection,
-                          confidence: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option>Low</option>
-                      <option>Medium</option>
-                      <option>High</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Child comfort
-                    </label>
-                    <select
-                      value={stageReflection.comfort}
-                      onChange={(e) =>
-                        setStageReflection({
-                          ...stageReflection,
-                          comfort: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option>Low</option>
-                      <option>Medium</option>
-                      <option>High</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeStage === 4 && (
-              <div className="rounded-xl border border-zinc-200 p-4 bg-white space-y-4">
-                <h3 className="text-lg font-semibold text-zinc-900">
-                  Stage 4 · Continuity
-                </h3>
-                <p className="text-sm text-zinc-600">
-                  Keep the arc going with micro‑quests and badges.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Next arc
-                    </label>
-                    <select
-                      value={stageContinuity.nextArc}
-                      onChange={(e) =>
-                        setStageContinuity({
-                          ...stageContinuity,
-                          nextArc: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="school-arc">
-                        School Adventure (week)
-                      </option>
-                      <option value="friend-arc">New Friend Mini‑Arc</option>
-                      <option value="store-arc">Helper at the Store</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">
-                      Reminder cadence
-                    </label>
-                    <select
-                      value={stageContinuity.cadence}
-                      onChange={(e) =>
-                        setStageContinuity({
-                          ...stageContinuity,
-                          cadence: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option>Daily</option>
-                      <option>Every 2 days</option>
-                      <option>Weekly</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-zinc-700">Badge</label>
-                    <select
-                      value={stageContinuity.badge}
-                      onChange={(e) =>
-                        setStageContinuity({
-                          ...stageContinuity,
-                          badge: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
-                    >
-                      <option value="bravery">Bravery Badge</option>
-                      <option value="sharing">Sharing Star</option>
-                      <option value="helper">Helpful Hero</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
+          <h2 className="text-xl font-semibold text-zinc-900">
+            Interactive Parent Training
+          </h2>
+          <p className="mt-2 text-sm text-zinc-700">
+            Learn the science behind StoryPal and how to use{" "}
+            <span className="font-semibold">Co‑Action</span>—doing the steps
+            together with your child—to make stories feel safe, playful, and
+            effective.
+          </p>
           <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
-              onClick={generateStepsFromStages}
-              className="rounded-xl px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600"
+              onClick={() => {
+                setPreviewModule(PARENT_TRAINING_MODULE);
+                setShowPreview(true);
+              }}
+              className="rounded-xl px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold"
             >
-              Generate steps from stages
+              Start training
             </button>
-            <span className="text-sm text-zinc-600">
-              Adds generated steps to the end of your scene; nothing is removed.
+            <span className="text-xs text-zinc-500">
+              3–5 minutes · Read or listen together
             </span>
           </div>
         </section>
 
-        <section className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="title" className="block text-sm text-zinc-700">
-                  Title
-                </label>
-                <input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Calm Breathing Mission"
-                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="cover" className="block text-sm text-zinc-700">
-                  Cover Image URL (optional)
-                </label>
-                <input
-                  id="cover"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  placeholder="https://example.com/cover.jpg"
-                  className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-700">Add step:</span>
-                <button
-                  type="button"
-                  onClick={() => selectedPassport && addStep("doctor")}
-                  className="rounded-xl px-3 py-1.5 bg-blue-500 text-white hover:bg-blue-600"
-                >
-                  Doctor message
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectedPassport && addStep("user-input")}
-                  className="rounded-xl px-3 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600"
-                >
-                  Ask for input
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectedPassport && addStep("choice")}
-                  className="rounded-xl px-3 py-1.5 bg-purple-500 text-white hover:bg-purple-600"
-                >
-                  Multiple choice
-                </button>
-              </div>
-
-              <ol className="space-y-4">
-                {steps.map((step, idx) => (
-                  <li
-                    key={step.id}
-                    className="rounded-xl border border-zinc-200 p-4 bg-white"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-zinc-600">
-                        Step {idx + 1} • {step.type}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => moveStep(step.id, "up")}
-                          className="rounded-lg px-2 py-1 text-zinc-700 hover:bg-zinc-100"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveStep(step.id, "down")}
-                          className="rounded-lg px-2 py-1 text-zinc-700 hover:bg-zinc-100"
-                        >
-                          ↓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteStep(step.id)}
-                          className="rounded-lg px-2 py-1 text-red-600 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-
-                    {step.type === "doctor" && (
-                      <div className="mt-3">
-                        <label className="block text-sm text-zinc-700">
-                          Message
-                        </label>
-                        <textarea
-                          value={step.message}
-                          onChange={(e) =>
-                            updateStep(step.id, "message", e.target.value)
-                          }
-                          rows={3}
-                          placeholder="Write the doctor's message..."
-                          className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                        />
-                      </div>
-                    )}
-
-                    {step.type === "user-input" && (
-                      <div className="mt-3 space-y-3">
-                        <div>
-                          <label className="block text-sm text-zinc-700">
-                            Prompt
-                          </label>
-                          <textarea
-                            value={step.message}
-                            onChange={(e) =>
-                              updateStep(step.id, "message", e.target.value)
-                            }
-                            rows={2}
-                            placeholder="Ask the child a question..."
-                            className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-zinc-700">
-                            Placeholder
-                          </label>
-                          <input
-                            value={step.placeholder || ""}
-                            onChange={(e) =>
-                              updateStep(step.id, "placeholder", e.target.value)
-                            }
-                            placeholder="Type your answer..."
-                            className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {step.type === "choice" && (
-                      <div className="mt-3 space-y-3">
-                        <div>
-                          <label className="block text-sm text-zinc-700">
-                            Question
-                          </label>
-                          <textarea
-                            value={step.message}
-                            onChange={(e) =>
-                              updateStep(step.id, "message", e.target.value)
-                            }
-                            rows={2}
-                            placeholder="Ask the child to choose..."
-                            className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <label className="block text-sm text-zinc-700">
-                              Options
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => addChoiceOption(step.id)}
-                              className="rounded-lg px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-sm"
-                            >
-                              Add option
-                            </button>
-                          </div>
-                          <div className="mt-2 space-y-2">
-                            {(step.options || []).map((opt, i) => (
-                              <div key={i} className="flex items-center gap-2">
-                                <input
-                                  value={opt}
-                                  onChange={(e) =>
-                                    updateChoiceOption(
-                                      step.id,
-                                      i,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder={`Option ${i + 1}`}
-                                  className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeChoiceOption(step.id, i)}
-                                  className="rounded-lg px-2 py-2 text-red-600 hover:bg-red-50"
-                                  title="Remove option"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ol>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => selectedPassport && setShowPreview(true)}
-                  disabled={!isValid || !selectedPassport}
-                  className="rounded-xl px-4 py-2 bg-zinc-800 text-white hover:bg-zinc-900 disabled:opacity-50"
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={upsertModule}
-                  disabled={!isValid || !selectedPassport}
-                  className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {editingId ? "Update module" : "Save module"}
-                </button>
-                {editingId && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="rounded-xl px-4 py-2 bg-zinc-100 hover:bg-zinc-200"
-                  >
-                    Cancel edit
-                  </button>
-                )}
-              </div>
+        {passports.length === 0 ? (
+          <div className="mt-10 flex flex-col items-center justify-center min-h-[40vh]">
+            <div className="text-center max-w-md">
+              <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
+                Create a Passport to Continue
+              </h2>
+              <p className="text-lg text-zinc-700 mb-6">
+                Before you can design story modules, you need to create a
+                Communication Passport for your child.
+              </p>
+              <CommunicationPassports
+                passports={[]}
+                selectedPassportId={null}
+                onPassportChange={(next) => {
+                  setPassports(next);
+                  savePassportsToStorage(next, currentUser?.uid);
+                }}
+                onSelectedPassportChange={setSelectedPassportId}
+              />
             </div>
           </div>
+        ) : (
+          <>
+            <CommunicationPassports
+              passports={passports}
+              selectedPassportId={selectedPassportId}
+              onPassportChange={(next) => {
+                setPassports(next);
+                savePassportsToStorage(next, currentUser?.uid);
+              }}
+              onSelectedPassportChange={setSelectedPassportId}
+            />
 
-          <div className="rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-zinc-900">
-              Saved modules
-            </h2>
-            <p className="text-sm text-zinc-600">Stored in this browser.</p>
-            <ul className="mt-3 space-y-3">
-              {modules.length === 0 && (
-                <li className="text-sm text-zinc-600">No modules yet.</li>
-              )}
-              {modules.map((m) => (
-                <li
-                  key={m.id}
-                  className="rounded-xl border border-zinc-200 p-3 bg-white"
-                >
-                  <div className="font-medium text-zinc-900">{m.title}</div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowPreview(true);
-                        setEditingId(m.id);
-                        setTitle(m.title || "");
-                        setCoverImage(m.coverImage || "");
-                        setSteps(Array.isArray(m.steps) ? m.steps : []);
-                        if (m.childId) setSelectedPassportId(m.childId);
-                        if (m.stageDesign) {
-                          setStageFraming(
-                            m.stageDesign.framing || stageFraming
-                          );
-                          setStageImmersion(
-                            m.stageDesign.immersion || stageImmersion
-                          );
-                          setStageReflection(
-                            m.stageDesign.reflection || stageReflection
-                          );
-                          setStageContinuity(
-                            m.stageDesign.continuity || stageContinuity
-                          );
-                        }
-                      }}
-                      className="rounded-lg px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-sm"
-                    >
-                      Preview / Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteModule(m.id)}
-                      className="rounded-lg px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+            <StoryModules
+              selectedPassport={selectedPassport}
+              onSave={handleModuleSave}
+              onPreview={handleModulePreview}
+              initialData={
+                editingModuleId
+                  ? modules.find((m) => m.id === editingModuleId)
+                  : null
+              }
+            />
+
+            {/* Saved Modules - below the grid */}
+            <SavedModules
+              modules={modules}
+              onEdit={(m) => {
+                if (m.childId) setSelectedPassportId(m.childId);
+                handleModuleEdit(m);
+              }}
+              onDelete={deleteModule}
+            />
+
+            {/* Reflection Journal */}
+            <ReflectionJournal
+              modules={modules}
+              reflections={reflections}
+              onSave={(reflectionData) => {
+                const reflection = {
+                  id: reflectionData.id || `${Date.now()}`,
+                  storyId: reflectionData.storyId,
+                  childComfort: reflectionData.childComfort,
+                  parentConfidence: reflectionData.parentConfidence,
+                  observations: reflectionData.observations.trim(),
+                  successMoments: reflectionData.successMoments.trim(),
+                  createdAt: reflectionData.id
+                    ? reflections.find((r) => r.id === reflectionData.id)
+                        ?.createdAt || new Date().toISOString()
+                    : new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                };
+                const next = [...reflections];
+                const existingIdx = next.findIndex(
+                  (r) => r.id === reflection.id
+                );
+                if (existingIdx >= 0) {
+                  next[existingIdx] = reflection;
+                } else {
+                  next.push(reflection);
+                }
+                setReflections(next);
+                saveReflectionsToStorage(next, currentUser?.uid);
+              }}
+              onEdit={(reflection) => {
+                // Component handles this internally
+              }}
+              onDelete={(id) => {
+                const next = reflections.filter((r) => r.id !== id);
+                setReflections(next);
+                saveReflectionsToStorage(next, currentUser?.uid);
+              }}
+            />
           </>
         )}
 
-        {showPassportForm && passports.length === 0 && (
+        {/* Removed duplicate passport form - handled by CommunicationPassports component */}
+        {false && (
           <div className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-zinc-900">
@@ -1817,7 +531,7 @@ export default function ParentPortal() {
                 <label className="block text-sm text-zinc-700">
                   Choose avatar
                 </label>
-                <div className="mt-2 grid grid-cols-3 gap-3">
+                <div className="mt-2 grid grid-cols-3 gap-3 ">
                   {["bird", "giraffe", "elephant"].map((a) => {
                     const meta =
                       a === "elephant"
@@ -1888,9 +602,7 @@ export default function ParentPortal() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm text-zinc-700">
-                  Pronouns
-                </label>
+                <label className="block text-sm text-zinc-700">Pronouns</label>
                 <div className="mt-1 grid grid-cols-2 md:grid-cols-4 gap-2">
                   <input
                     value={cpPronouns.subject}
@@ -1944,23 +656,21 @@ export default function ParentPortal() {
                   Communication Modalities
                 </label>
                 <div className="mt-1 grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
-                  {["AAC", "PECS", "Gestures", "Sign", "Verbal"].map(
-                    (key) => (
-                      <label key={key} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={cpModalities[key]}
-                          onChange={(e) =>
-                            setCpModalities({
-                              ...cpModalities,
-                              [key]: e.target.checked,
-                            })
-                          }
-                        />
-                        <span>{key}</span>
-                      </label>
-                    )
-                  )}
+                  {["AAC", "PECS", "Gestures", "Sign", "Verbal"].map((key) => (
+                    <label key={key} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={cpModalities[key]}
+                        onChange={(e) =>
+                          setCpModalities({
+                            ...cpModalities,
+                            [key]: e.target.checked,
+                          })
+                        }
+                      />
+                      <span>{key}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -1981,9 +691,7 @@ export default function ParentPortal() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-700">
-                  Latency
-                </label>
+                <label className="block text-sm text-zinc-700">Latency</label>
                 <input
                   value={cpCommunication.latency}
                   onChange={(e) =>
@@ -2046,9 +754,7 @@ export default function ParentPortal() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm text-zinc-700">
-                  Triggers
-                </label>
+                <label className="block text-sm text-zinc-700">Triggers</label>
                 <textarea
                   value={cpSensory.triggers}
                   onChange={(e) =>
@@ -2108,9 +814,7 @@ export default function ParentPortal() {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm text-zinc-700">
-                  Interests
-                </label>
+                <label className="block text-sm text-zinc-700">Interests</label>
                 <textarea
                   value={cpInteraction.interests}
                   onChange={(e) =>
@@ -2259,17 +963,27 @@ export default function ParentPortal() {
             </div>
           </div>
         )}
+
+        {/* Site Font */}
+        <SiteFont />
       </div>
 
-      {showPreview && passports.length > 0 && (
+      {showPreview && previewModule && (
         <StoryPlayer
-          moduleDefinition={modulePreview}
-          templateContext={{
-            ...buildContextFromPassport(selectedPassport),
-            stages: buildStageContext(),
+          moduleDefinition={previewModule}
+          templateContext={
+            previewModule.id === "parent-training" || !selectedPassport
+              ? {}
+              : buildContextFromPassport(selectedPassport)
+          }
+          onClose={() => {
+            setShowPreview(false);
+            setPreviewModule(null);
           }}
-          onClose={() => setShowPreview(false)}
-          onFinished={() => setShowPreview(false)}
+          onFinished={() => {
+            setShowPreview(false);
+            setPreviewModule(null);
+          }}
         />
       )}
     </div>

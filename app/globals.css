@@ -13,56 +13,87 @@ html {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-shadows-into-light);
-  --font-mono: var(--font-shadows-into-light);
+}
+
+/* App-wide font variable with defaults and runtime switching */
+:root {
+  --app-font: var(--font-epilogue);
+}
+html[data-ui-font="classic"] {
+  --app-font: var(--font-epilogue);
+}
+html[data-ui-font="hand"] {
+  --app-font: var(--font-shadows-into-light);
+}
+html[data-ui-font="playful"] {
+  --app-font: var(--font-slackey);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-shadows-into-light);
-  line-height: 1.6;
-  font-weight: 600; /* stronger default for readability */
+  line-height: 1.65;
+  font-weight: 400; /* normal weight for body text */
+  letter-spacing: 0.01em;
 }
 
-/* Use Shadows Into Light for headings as well */
-h1,
-h2,
-h3,
+/* Headings inherit app font with progressive weights */
+h1 {
+  font-family: var(--app-font) !important;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: var(--app-font) !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-family: var(--app-font) !important;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
 h4,
 h5,
 h6 {
-  font-family: var(--font-shadows-into-light);
-  font-weight: 800; /* stronger headings */
+  font-family: var(--app-font) !important;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
-/* Slightly widen regular text and tune bold/heading tracking */
-body {
-  letter-spacing: 0.02em; /* a bit wider for readability with this script font */
+/* All elements inherit app font */
+* {
+  font-family: inherit;
 }
 
-strong,
-b,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-.font-semibold,
-.font-bold {
-  letter-spacing: 0.01em; /* slightly tighter than body to balance weight */
+/* Ensure form elements and interactive elements use app font */
+input,
+textarea,
+select,
+button,
+label,
+span,
+div,
+p,
+a {
+  font-family: inherit;
 }
 
 /* Ensure bold text and Tailwind weight utilities are visibly stronger */
 strong,
 b {
-  font-weight: 700;
+  font-weight: 600;
 }
 .font-semibold {
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 .font-bold {
+  font-weight: 700 !important;
+}
+.font-extrabold {
   font-weight: 800 !important;
 }
 
