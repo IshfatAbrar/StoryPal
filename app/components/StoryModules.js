@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Sparkles } from "lucide-react";
 
 function createEmptyStep(stepType) {
@@ -9,7 +9,13 @@ function createEmptyStep(stepType) {
     return { id, type: "doctor", message: "", imageUrl: "" };
   }
   if (stepType === "user-input") {
-    return { id, type: "user-input", message: "", placeholder: "", imageUrl: "" };
+    return {
+      id,
+      type: "user-input",
+      message: "",
+      placeholder: "",
+      imageUrl: "",
+    };
   }
   return { id, type: "choice", message: "", options: [""], imageUrl: "" };
 }
@@ -32,21 +38,22 @@ function validateModule(moduleDef) {
 }
 
 export default function StoryModules({
-  selectedPassport,
+  passports,
   onSave,
   onPreview,
   initialData,
 }) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
+  const [selectedPassportId, setSelectedPassportId] = useState(
+    initialData?.childId || ""
+  );
   const [steps, setSteps] = useState(
     Array.isArray(initialData?.steps) ? initialData.steps : []
   );
   const [editingId, setEditingId] = useState(initialData?.id || null);
   const [activeStage, setActiveStage] = useState(1);
-  const [sceneFont, setSceneFont] = useState(
-    initialData?.fontPreset || "hand"
-  );
+  const [sceneFont, setSceneFont] = useState(initialData?.fontPreset || "hand");
   const [stageFraming, setStageFraming] = useState(
     initialData?.stageDesign?.framing || {
       focus: "greeting",
@@ -76,6 +83,75 @@ export default function StoryModules({
       badge: "bravery",
     }
   );
+
+  // Update form when initialData changes (for editing)
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || "");
+      setCoverImage(initialData.coverImage || "");
+      setSelectedPassportId(initialData.childId || "");
+      setSteps(Array.isArray(initialData.steps) ? initialData.steps : []);
+      setEditingId(initialData.id || null);
+      setSceneFont(initialData.fontPreset || "hand");
+      setStageFraming(
+        initialData.stageDesign?.framing || {
+          focus: "greeting",
+          scenario: "school",
+          tone: "brave",
+          parentGoal: "",
+        }
+      );
+      setStageImmersion(
+        initialData.stageDesign?.immersion || {
+          feeling: "shy",
+          coplay: "wave",
+          imagery: "",
+        }
+      );
+      setStageReflection(
+        initialData.stageDesign?.reflection || {
+          tried: "",
+          confidence: "Medium",
+          comfort: "Medium",
+        }
+      );
+      setStageContinuity(
+        initialData.stageDesign?.continuity || {
+          nextArc: "school-arc",
+          cadence: "Every 2 days",
+          badge: "bravery",
+        }
+      );
+    } else {
+      // Clear form when initialData is null
+      setTitle("");
+      setCoverImage("");
+      setSteps([]);
+      setEditingId(null);
+      setSceneFont("hand");
+      setStageFraming({
+        focus: "greeting",
+        scenario: "school",
+        tone: "brave",
+        parentGoal: "",
+      });
+      setStageImmersion({
+        feeling: "shy",
+        coplay: "wave",
+        imagery: "",
+      });
+      setStageReflection({
+        tried: "",
+        confidence: "Medium",
+        comfort: "Medium",
+      });
+      setStageContinuity({
+        nextArc: "school-arc",
+        cadence: "Every 2 days",
+        badge: "bravery",
+      });
+    }
+  }, [initialData]);
 
   function buildStageContext() {
     return {
@@ -209,7 +285,7 @@ export default function StoryModules({
       title: title.trim(),
       coverImage: coverImage.trim(),
       steps,
-      childId: selectedPassport?.id || null,
+      childId: selectedPassportId || null,
       stageDesign: {
         framing: { ...stageFraming },
         immersion: { ...stageImmersion },
@@ -229,7 +305,7 @@ export default function StoryModules({
   return (
     <section className="mt-12">
       <div className="flex flex-col mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Story Modules</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Create Modules</h1>
         <p className="text-zinc-700">
           Create personalized story modules for your child.
         </p>
@@ -262,26 +338,52 @@ export default function StoryModules({
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="passport-select"
+                className="block text-sm text-zinc-700"
+              >
+                For Child (Passport)
+              </label>
+              <select
+                id="passport-select"
+                value={selectedPassportId}
+                onChange={(e) => setSelectedPassportId(e.target.value)}
+                className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+              >
+                <option value="">All Children / General</option>
+                {passports?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.childName}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-zinc-500">
+                Select which child this module is for. Leave as "All Children"
+                for general modules.
+              </p>
+            </div>
+
             <div className="flex items-center gap-2">
               <span className="text-sm text-zinc-700">Add step:</span>
               <button
                 type="button"
-                onClick={() => selectedPassport && addStep("doctor")}
-                className="rounded-xl px-3 py-1.5 bg-blue-500 text-white hover:bg-blue-600"
+                onClick={() => addStep("doctor")}
+                className="rounded-xl px-3 py-1.5 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
               >
-                Doctor message
+                Message
               </button>
               <button
                 type="button"
-                onClick={() => selectedPassport && addStep("user-input")}
-                className="rounded-xl px-3 py-1.5 bg-emerald-900 text-white hover:bg-emerald-600"
+                onClick={() => addStep("user-input")}
+                className="rounded-xl px-3 py-1.5 bg-[#6b2a99] text-white hover:bg-[#7c2da3]"
               >
                 Ask for input
               </button>
               <button
                 type="button"
-                onClick={() => selectedPassport && addStep("choice")}
-                className="rounded-xl px-3 py-1.5 bg-purple-500 text-white hover:bg-purple-600"
+                onClick={() => addStep("choice")}
+                className="rounded-xl px-3 py-1.5 bg-[#7c2da3] text-white hover:bg-[#5b217f]"
               >
                 Multiple choice
               </button>
@@ -334,7 +436,7 @@ export default function StoryModules({
                             updateStep(step.id, "message", e.target.value)
                           }
                           rows={3}
-                          placeholder="Write the doctor's message..."
+                          placeholder="Write the message..."
                           className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
                         />
                       </div>
@@ -434,11 +536,7 @@ export default function StoryModules({
                               <input
                                 value={opt}
                                 onChange={(e) =>
-                                  updateChoiceOption(
-                                    step.id,
-                                    i,
-                                    e.target.value
-                                  )
+                                  updateChoiceOption(step.id, i, e.target.value)
                                 }
                                 placeholder={`Option ${i + 1}`}
                                 className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
@@ -479,7 +577,7 @@ export default function StoryModules({
                 type="button"
                 onClick={handlePreview}
                 disabled={!isValid || !selectedPassport}
-                className="rounded-xl px-4 py-2 bg-zinc-800 text-white hover:bg-zinc-900 disabled:opacity-50"
+                className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 Preview
               </button>
@@ -487,7 +585,7 @@ export default function StoryModules({
                 type="button"
                 onClick={handleSave}
                 disabled={!isValid || !selectedPassport}
-                className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+                className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 {editingId ? "Update module" : "Save module"}
               </button>
@@ -834,7 +932,7 @@ export default function StoryModules({
             <button
               type="button"
               onClick={generateStepsFromStages}
-              className="rounded-xl px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600"
+              className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
             >
               Generate steps with Ai{" "}
               <Sparkles className="inline-block w-4 h-4 mb-1" />
@@ -845,4 +943,3 @@ export default function StoryModules({
     </section>
   );
 }
-

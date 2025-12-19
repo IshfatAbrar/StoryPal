@@ -80,21 +80,24 @@ export default function ChildPortal() {
     }
   }, []);
 
-  const selectedPassport = passports.find((p) => p.id === selectedPassportId) || null;
+  const selectedPassport =
+    passports.find((p) => p.id === selectedPassportId) || null;
+
+  // Filter modules to show only those for the selected passport or general modules
+  const filteredModules = modules.filter((m) => {
+    // Show general modules (childId is null or empty)
+    if (!m.childId) return true;
+    // If a passport is selected, show modules for that child
+    if (selectedPassportId && m.childId === selectedPassportId) return true;
+    // Otherwise, don't show this module
+    return false;
+  });
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-semibold text-zinc-900">Child Portal</h1>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-blue-600 hover:underline">
-              Home
-            </Link>
-            <Link href="/parent" className="text-blue-600 hover:underline">
-              Parent Portal
-            </Link>
-          </div>
         </div>
         <p className="mt-2 text-zinc-700">Tap a story to begin.</p>
 
@@ -120,10 +123,12 @@ export default function ChildPortal() {
         </div>
 
         <section className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.length === 0 && (
-            <div className="text-zinc-600">No stories yet. Ask your parent to create one.</div>
+          {filteredModules.length === 0 && (
+            <div className="text-zinc-600">
+              No stories yet. Ask your parent to create one.
+            </div>
           )}
-          {modules.map((m) => (
+          {filteredModules.map((m) => (
             <button
               key={m.id}
               type="button"
@@ -146,7 +151,9 @@ export default function ChildPortal() {
                   </div>
                 )}
               </div>
-              <div className="text-zinc-900 font-semibold leading-snug">{m.title}</div>
+              <div className="text-zinc-900 font-semibold leading-snug">
+                {m.title}
+              </div>
             </button>
           ))}
         </section>
@@ -165,5 +172,3 @@ export default function ChildPortal() {
     </div>
   );
 }
-
-

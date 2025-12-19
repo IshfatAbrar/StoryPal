@@ -99,12 +99,9 @@ export default function ParentAuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-blue-50 flex items-center justify-center px-4">
+    <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl bg-white/90 backdrop-blur shadow-lg border border-zinc-100 p-8 space-y-6">
         <div className="text-center space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-rose-400 font-semibold">
-            Parent Portal
-          </p>
           <h1 className="text-3xl font-bold text-zinc-900">
             {mode === "signin" ? "Sign in" : "Create your account"}
           </h1>
@@ -150,7 +147,7 @@ export default function ParentAuthPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60 focus:border-rose-300"
+              className="w-full rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-slate-300/60 focus:border-slate-300"
             />
           </div>
           <div className="space-y-2">
@@ -160,7 +157,7 @@ export default function ParentAuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60 focus:border-rose-300"
+              className="w-full rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-slate-300/60 focus:border-slate-300"
             />
           </div>
 
@@ -177,9 +174,7 @@ export default function ParentAuthPage() {
                 className="w-full rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60 focus:border-rose-300"
               />
               {passwordMismatch && (
-                <p className="text-xs text-red-600">
-                  Passwords do not match.
-                </p>
+                <p className="text-xs text-red-600">Passwords do not match.</p>
               )}
             </div>
           )}
@@ -220,7 +215,8 @@ export default function ParentAuthPage() {
               New here?{" "}
               <button
                 type="button"
-                className="text-rose-500 font-semibold"
+                className="text-[#5b217f] font-semibold"
+                style={{ cursor: "pointer" }}
                 onClick={() => {
                   setMode("signup");
                   setError("");
@@ -234,7 +230,8 @@ export default function ParentAuthPage() {
               Already have an account?{" "}
               <button
                 type="button"
-                className="text-rose-500 font-semibold"
+                className="text-[#5b217f] font-semibold"
+                style={{ cursor: "pointer" }}
                 onClick={() => {
                   setMode("signin");
                   setError("");
@@ -249,5 +246,3 @@ export default function ParentAuthPage() {
     </main>
   );
 }
-
-

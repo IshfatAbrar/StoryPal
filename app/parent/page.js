@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import StoryPlayer from "../components/StoryPlayer";
 import SiteFont from "../components/SiteFont";
 import SavedModules from "../components/SavedModules";
 import ReflectionJournal from "../components/ReflectionJournal";
 import CommunicationPassports from "../components/CommunicationPassports";
 import StoryModules from "../components/StoryModules";
-import { auth } from "../lib/firebaseClient";
-import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../lib/firebaseClient";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPassport } from "@fortawesome/free-solid-svg-icons";
 
 const STORAGE_KEY = "storypal.modules";
 const PASSPORTS_KEY = "storypal.passports";
@@ -32,10 +41,13 @@ function loadModulesFromStorage(uid) {
 
 function saveModulesToStorage(modules, uid) {
   if (typeof window === "undefined") return;
+  // Save to user-specific key
   window.localStorage.setItem(
     scopedKey(STORAGE_KEY, uid),
     JSON.stringify(modules)
   );
+  // Also save to global key for child portal access
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(modules));
 }
 
 function loadPassportsFromStorage(uid) {
@@ -50,10 +62,13 @@ function loadPassportsFromStorage(uid) {
 
 function savePassportsToStorage(passports, uid) {
   if (typeof window === "undefined") return;
+  // Save to user-specific key
   window.localStorage.setItem(
     scopedKey(PASSPORTS_KEY, uid),
     JSON.stringify(passports)
   );
+  // Also save to global key for child portal access
+  window.localStorage.setItem(PASSPORTS_KEY, JSON.stringify(passports));
 }
 
 function loadReflectionsFromStorage(uid) {
@@ -111,9 +126,52 @@ function validateModule(moduleDef) {
 // Simple pregenerated example story modules shown by default
 const DEFAULT_MODULES = [
   {
+    id: "demo-green-mission",
+    title: "The Green Mission",
+    coverImage:
+      "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/518340410_24346993624931719_8032300327163763434_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=SiJGh32h-uoQ7kNvwEChBY_&_nc_oc=AdmE0VEUaheHfuaNi_mMG3omU13YPpjg1dNiY--1tESxEWCK4HGDTXa2GtXwdPudLgA&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=J4Z0Zoueh-xe2e5L-bKcnw&oh=00_Afl9jvL9XbSy4cElYoWjmf9tuF7RPu6aWo-QjV13gjj-EQ&oe=694A4683",
+    fontPreset: "hand",
+    childId: null,
+    stageDesign: null,
+    steps: [
+      {
+        type: "doctor",
+        message:
+          "Welcome to The Green Mission! Today, we're going on an adventure to help our friend the frog find its way home.",
+      },
+      {
+        type: "doctor",
+        message:
+          "The friendly frog lives in a beautiful pond surrounded by lily pads and colorful fish. Can you imagine the pond in your mind?",
+      },
+      {
+        type: "choice",
+        message: "What do you think the frog needs help with?",
+        options: [
+          "Finding lily pads to hop on",
+          "Making friends with other pond creatures",
+          "Learning to swim in deeper water",
+        ],
+      },
+      {
+        type: "user-input",
+        message:
+          "Let's help the frog! What would you say to encourage the frog on its journey?",
+        placeholder:
+          "e.g., You can do it, little frog! Take one hop at a time.",
+      },
+      {
+        type: "doctor",
+        message:
+          "Great job! The frog made it home safely thanks to your help. Remember, taking small steps is how we accomplish big things!",
+      },
+    ],
+  },
+  {
     id: "demo-calm-breathing",
     title: "Calm Breathing Mission",
-    coverImage: "",
+    coverImage:
+      "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/522631022_3386434758163669_8506587699192492412_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=8bXqb4m4vE8Q7kNvwGvfMBC&_nc_oc=Adlg0OsWBWQVNdh7q_wGwaLWAaq_hHistDSHGPzbD3tFJ1Y0zlMF59eRGYomG-XEG1E&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=cSJUhkaLW0TV5zib1pC69A&oh=00_AfkJWVr2KeC34R5a_PiAx5RLm1Zx2PqxscOEFceAzeMwKQ&oe=694A6CC2",
     fontPreset: "classic",
     childId: null,
     stageDesign: null,
@@ -136,14 +194,15 @@ const DEFAULT_MODULES = [
       {
         type: "doctor",
         message:
-          "Let’s try three slow sparkle breaths together. Breathe in through your nose… and blow the sparkles out gently.",
+          "Let's try three slow sparkle breaths together. Breathe in through your nose… and blow the sparkles out gently.",
       },
     ],
   },
   {
     id: "demo-school-wave",
     title: "Brave School Wave",
-    coverImage: "",
+    coverImage:
+      "https://scontent-lga3-2.xx.fbcdn.net/v/t39.30808-6/520233296_1130962188872105_8796726091235058018_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=xfsDwob31QMQ7kNvwFaeTzt&_nc_oc=AdnH9z0N8VOZnCJbQ1yIfK2UyFvXBs1DMHINhdBIFr6FT1eTBdB7H_ifEvFxe5ch6JM&_nc_zt=23&_nc_ht=scontent-lga3-2.xx&_nc_gid=P---7by10uCwJuUYbFuKqQ&oh=00_Afkn2n1hzqT8JDCugwRPWRNRQNqmWyGUCSMA7XBLqWFeag&oe=694A5C95",
     fontPreset: "hand",
     childId: null,
     stageDesign: null,
@@ -164,7 +223,7 @@ const DEFAULT_MODULES = [
         options: [
           "A tiny wave with your hand",
           "Just looking and nodding",
-          "Holding your grown‑up’s hand and waving together",
+          "Holding your grown‑up's hand and waving together",
         ],
       },
       {
@@ -230,6 +289,7 @@ const PARENT_TRAINING_MODULE = {
 
 export default function ParentPortal() {
   const router = useRouter();
+  const savedModulesRef = useRef(null);
   const [modules, setModules] = useState([]);
   const [passports, setPassports] = useState([]);
   const [selectedPassportId, setSelectedPassportId] = useState(null);
@@ -242,6 +302,8 @@ export default function ParentPortal() {
   const [authReady, setAuthReady] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [modulesLoading, setModulesLoading] = useState(true);
+  const [showPassportDropdown, setShowPassportDropdown] = useState(false);
 
   // Require authenticated parent
   useEffect(() => {
@@ -262,29 +324,110 @@ export default function ParentPortal() {
 
   useEffect(() => {
     if (!authReady || !currentUser) return;
-    const uid = currentUser.uid;
-    const storedModules = loadModulesFromStorage(uid) || [];
-    // Ensure the two demo modules are present at least once
-    const missingDefaults = DEFAULT_MODULES.filter(
-      (demo) => !storedModules.some((m) => m.id === demo.id)
-    );
-    const mergedModules =
-      missingDefaults.length > 0
-        ? [...storedModules, ...missingDefaults]
-        : storedModules;
-    setModules(mergedModules);
-    if (missingDefaults.length > 0) {
-      saveModulesToStorage(mergedModules, uid);
+    let cancelled = false;
+
+    async function loadData() {
+      setModulesLoading(true);
+      const uid = currentUser.uid;
+      try {
+        const snap = await getDocs(collection(db, "users", uid, "modules"));
+        const cloudModules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        // Ensure the two demo modules are present at least once
+        const missingDefaults = DEFAULT_MODULES.filter(
+          (demo) => !cloudModules.some((m) => m.id === demo.id)
+        );
+
+        if (missingDefaults.length > 0) {
+          await Promise.all(
+            missingDefaults.map((demo) =>
+              setDoc(
+                doc(db, "users", uid, "modules", demo.id),
+                {
+                  ...demo,
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              )
+            )
+          );
+        }
+
+        const mergedModules =
+          missingDefaults.length > 0
+            ? [...cloudModules, ...missingDefaults]
+            : cloudModules;
+
+        if (!cancelled) {
+          setModules(mergedModules);
+          saveModulesToStorage(mergedModules, uid);
+        }
+      } catch (err) {
+        console.error("Failed to load modules from Firestore", err);
+      } finally {
+        if (!cancelled) setModulesLoading(false);
+      }
+
+      // Load passports from Firestore
+      try {
+        const passportSnap = await getDocs(
+          collection(db, "users", uid, "passports")
+        );
+        const cloudPassports = passportSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        if (!cancelled) {
+          setPassports(cloudPassports);
+          savePassportsToStorage(cloudPassports, uid);
+          if (cloudPassports.length > 0) {
+            setSelectedPassportId(cloudPassports[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load passports from Firestore", err);
+        // Fallback to localStorage
+        const loadedPassports = loadPassportsFromStorage(uid);
+        if (!cancelled) {
+          setPassports(loadedPassports);
+          if (loadedPassports.length > 0) {
+            setSelectedPassportId(loadedPassports[0].id);
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setReflections(loadReflectionsFromStorage(uid));
+      }
     }
-    const loadedPassports = loadPassportsFromStorage(uid);
-    setPassports(loadedPassports);
-    if (loadedPassports.length > 0) {
-      setSelectedPassportId(loadedPassports[0].id);
-    }
-    setReflections(loadReflectionsFromStorage(uid));
+
+    loadData();
+    return () => {
+      cancelled = true;
+    };
   }, [authReady, currentUser]);
 
   const showAuthGate = authChecking || !authReady;
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/parent/auth");
+    } catch (err) {
+      console.error("Failed to sign out", err);
+    }
+  };
+
+  useEffect(() => {
+    function handleLogoutRequest() {
+      handleSignOut();
+    }
+    window.addEventListener("request-logout", handleLogoutRequest);
+    return () => {
+      window.removeEventListener("request-logout", handleLogoutRequest);
+    };
+  }, []);
 
   function buildContextFromPassport(p) {
     if (!p) return {};
@@ -329,26 +472,65 @@ export default function ParentPortal() {
     [passports, selectedPassportId]
   );
 
-  function deleteModule(id) {
+  async function deleteModule(id) {
     const next = modules.filter((m) => m.id !== id);
     setModules(next);
     saveModulesToStorage(next, currentUser?.uid);
+    if (currentUser?.uid) {
+      try {
+        await deleteDoc(doc(db, "users", currentUser.uid, "modules", id));
+      } catch (err) {
+        console.error("Failed to delete module from Firestore", err);
+      }
+    }
     if (editingModuleId === id) {
       setEditingModuleId(null);
     }
   }
 
-  function handleModuleSave(moduleDefinition) {
+  async function handleModuleSave(moduleDefinition) {
+    const uid = currentUser?.uid;
+    const moduleWithMeta = {
+      ...moduleDefinition,
+      createdAt: moduleDefinition.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const next = [...modules];
-    const existingIdx = next.findIndex((m) => m.id === moduleDefinition.id);
+    const existingIdx = next.findIndex((m) => m.id === moduleWithMeta.id);
     if (existingIdx >= 0) {
-      next[existingIdx] = moduleDefinition;
+      next[existingIdx] = moduleWithMeta;
     } else {
-      next.unshift(moduleDefinition);
+      next.unshift(moduleWithMeta);
     }
     setModules(next);
-    saveModulesToStorage(next, currentUser?.uid);
+    saveModulesToStorage(next, uid);
     setEditingModuleId(null);
+
+    // Scroll to saved modules section
+    setTimeout(() => {
+      if (savedModulesRef.current) {
+        savedModulesRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }, 100);
+
+    if (uid) {
+      try {
+        await setDoc(
+          doc(db, "users", uid, "modules", moduleWithMeta.id),
+          {
+            ...moduleWithMeta,
+            updatedAt: serverTimestamp(),
+            createdAt: moduleWithMeta.createdAt,
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Failed to save module to Firestore", err);
+      }
+    }
   }
 
   function handleModulePreview(modulePreview) {
@@ -378,11 +560,73 @@ export default function ParentPortal() {
   return (
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-semibold text-zinc-900">
-            Parent Portal
-          </h1>
+        <div className="relative">
+          <div className="flex items-center gap-3 justify-between">
+            <h1 className="text-4xl font-semibold text-zinc-900">
+              Parent Portal
+            </h1>
+            <button
+              type="button"
+              onClick={() => setShowPassportDropdown(!showPassportDropdown)}
+              className="rounded-xl px-2 py-2 flex items-center justify-center  bg-slate-200 text-[#5b217f] hover:bg-slate-300 transition-colors"
+              title="Communication Passports"
+              aria-label="Communication Passports"
+            >
+              <p className="text-sm font-semibold">
+                {selectedPassport?.avatar ? (
+                  <img
+                    src={
+                      selectedPassport.avatar === "elephant"
+                        ? "/elephant.png"
+                        : selectedPassport.avatar === "giraffe"
+                        ? "/jiraffe.png"
+                        : "/bird.png"
+                    }
+                    alt={selectedPassport.avatar}
+                    className="inline-block w-6 h-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <FontAwesomeIcon icon={faPassport} />
+                )}
+                {"    "}
+                {selectedPassport?.childName}
+              </p>
+            </button>
+          </div>
         </div>
+
+        {showPassportDropdown && (
+          <CommunicationPassports
+            passports={passports}
+            selectedPassportId={selectedPassportId}
+            onPassportChange={async (next) => {
+              const uid = currentUser?.uid;
+              setPassports(next);
+              savePassportsToStorage(next, uid);
+
+              // Save all passports to Firestore
+              if (uid) {
+                try {
+                  await Promise.all(
+                    next.map((passport) =>
+                      setDoc(
+                        doc(db, "users", uid, "passports", passport.id),
+                        {
+                          ...passport,
+                          updatedAt: serverTimestamp(),
+                        },
+                        { merge: true }
+                      )
+                    )
+                  );
+                } catch (err) {
+                  console.error("Failed to save passports to Firestore", err);
+                }
+              }
+            }}
+            onSelectedPassportChange={setSelectedPassportId}
+          />
+        )}
 
         {/* Interactive Parent Training – always available */}
         <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
@@ -402,7 +646,7 @@ export default function ParentPortal() {
                 setPreviewModule(PARENT_TRAINING_MODULE);
                 setShowPreview(true);
               }}
-              className="rounded-xl px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 text-sm font-semibold"
+              className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] text-sm font-semibold"
             >
               Start training
             </button>
@@ -412,6 +656,18 @@ export default function ParentPortal() {
           </div>
         </section>
 
+        {/* Saved Modules */}
+        <div ref={savedModulesRef}>
+          <SavedModules
+            modules={modules}
+            onEdit={(m) => {
+              if (m.childId) setSelectedPassportId(m.childId);
+              handleModuleEdit(m);
+            }}
+            onDelete={deleteModule}
+          />
+        </div>
+
         {passports.length === 0 ? (
           <div className="mt-10 flex flex-col items-center justify-center min-h-[40vh]">
             <div className="text-center max-w-md">
@@ -420,33 +676,15 @@ export default function ParentPortal() {
               </h2>
               <p className="text-lg text-zinc-700 mb-6">
                 Before you can design story modules, you need to create a
-                Communication Passport for your child.
+                Communication Passport for your child. Click the passport icon
+                above to get started.
               </p>
-              <CommunicationPassports
-                passports={[]}
-                selectedPassportId={null}
-                onPassportChange={(next) => {
-                  setPassports(next);
-                  savePassportsToStorage(next, currentUser?.uid);
-                }}
-                onSelectedPassportChange={setSelectedPassportId}
-              />
             </div>
           </div>
         ) : (
           <>
-            <CommunicationPassports
-              passports={passports}
-              selectedPassportId={selectedPassportId}
-              onPassportChange={(next) => {
-                setPassports(next);
-                savePassportsToStorage(next, currentUser?.uid);
-              }}
-              onSelectedPassportChange={setSelectedPassportId}
-            />
-
             <StoryModules
-              selectedPassport={selectedPassport}
+              passports={passports}
               onSave={handleModuleSave}
               onPreview={handleModulePreview}
               initialData={
@@ -454,16 +692,6 @@ export default function ParentPortal() {
                   ? modules.find((m) => m.id === editingModuleId)
                   : null
               }
-            />
-
-            {/* Saved Modules - below the grid */}
-            <SavedModules
-              modules={modules}
-              onEdit={(m) => {
-                if (m.childId) setSelectedPassportId(m.childId);
-                handleModuleEdit(m);
-              }}
-              onDelete={deleteModule}
             />
 
             {/* Reflection Journal */}

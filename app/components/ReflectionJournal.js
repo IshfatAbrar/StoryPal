@@ -103,13 +103,13 @@ export default function ReflectionJournal({ modules, reflections, onSave, onEdit
                       childComfort: parseInt(e.target.value),
                     })
                   }
-                  className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-[#5b217f]"
                   style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                    background: `linear-gradient(to right, #5b217f 0%, #5b217f ${
                       ((form.childComfort - 1) / 4) * 100
-                    }%, #e4e4e7 ${
+                    }%, #e4d7ff ${
                       ((form.childComfort - 1) / 4) * 100
-                    }%, #e4e4e7 100%)`,
+                    }%, #e4d7ff 100%)`,
                   }}
                 />
               </div>
@@ -129,13 +129,13 @@ export default function ReflectionJournal({ modules, reflections, onSave, onEdit
                       parentConfidence: parseInt(e.target.value),
                     })
                   }
-                  className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-[#5b217f]"
                   style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                    background: `linear-gradient(to right, #5b217f 0%, #5b217f ${
                       ((form.parentConfidence - 1) / 4) * 100
-                    }%, #e4e4e7 ${
+                    }%, #e4d7ff ${
                       ((form.parentConfidence - 1) / 4) * 100
-                    }%, #e4e4e7 100%)`,
+                    }%, #e4d7ff 100%)`,
                   }}
                 />
               </div>
@@ -175,7 +175,7 @@ export default function ReflectionJournal({ modules, reflections, onSave, onEdit
                   type="button"
                   onClick={handleSave}
                   disabled={!form.storyId}
-                  className="rounded-xl px-6 py-3 bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="rounded-xl px-6 py-3 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   Save Reflection
                 </button>
@@ -262,7 +262,7 @@ export default function ReflectionJournal({ modules, reflections, onSave, onEdit
               resetForm();
               setShowForm(true);
             }}
-            className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 text-sm"
+            className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] text-sm"
           >
             New Reflection
           </button>

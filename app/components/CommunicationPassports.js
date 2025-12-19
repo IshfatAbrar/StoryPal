@@ -207,7 +207,7 @@ export default function CommunicationPassports({
   };
 
   return (
-    <section className="mt-6">
+    <section className="mt-6 bg-white rounded-2xl p-6 shadow-sm backdrop-blur">
       <div className="flex flex-col justify-between mb-4">
         <h2 className="text-2xl font-semibold text-zinc-900">
           Communication Passports
@@ -294,7 +294,7 @@ export default function CommunicationPassports({
                 <button
                   type="button"
                   onClick={() => handleEdit(selectedPassport)}
-                  className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600"
+                  className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
                 >
                   Edit
                 </button>
@@ -605,7 +605,10 @@ export default function CommunicationPassports({
                 <textarea
                   value={cpSensory.sensitivities}
                   onChange={(e) =>
-                    setCpSensory({ ...cpSensory, sensitivities: e.target.value })
+                    setCpSensory({
+                      ...cpSensory,
+                      sensitivities: e.target.value,
+                    })
                   }
                   rows={2}
                   onFocus={() => {
@@ -738,7 +741,9 @@ export default function CommunicationPassports({
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm text-zinc-700">Do / Don't</label>
+                <label className="block text-sm text-zinc-700">
+                  Do / Don't
+                </label>
                 <textarea
                   value={cpInteraction.dosDonts}
                   onChange={(e) =>
@@ -829,7 +834,8 @@ export default function CommunicationPassports({
                     if (!cpAccess.accessibilityNeeds) {
                       setCpAccess({
                         ...cpAccess,
-                        accessibilityNeeds: "Visual schedule and AAC available.",
+                        accessibilityNeeds:
+                          "Visual schedule and AAC available.",
                       });
                     }
                   }}
@@ -920,7 +926,7 @@ export default function CommunicationPassports({
                 type="button"
                 onClick={handleSave}
                 disabled={!cpName.trim()}
-                className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+                className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 {editingId ? "Update Passport" : "Save Passport"}
               </button>
@@ -941,4 +947,3 @@ export default function CommunicationPassports({
     </section>
   );
 }
-

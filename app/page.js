@@ -1,87 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import HeroBanner from "./components/HeroBanner";
 
 export default function Home() {
-  const [step, setStep] = useState(1);
   const [userName, setUserName] = useState("");
   const [doctorName, setDoctorName] = useState("");
   const [selectedScene, setSelectedScene] = useState(null);
   const [storyStep, setStoryStep] = useState(0);
   const [userResponse, setUserResponse] = useState("");
   const [selectedChoice, setSelectedChoice] = useState(null);
-
-  const scenes = [
-    {
-      id: 1,
-      title: "Scene 1: The Small Light Explorer",
-      construct: "Empathy + Imagery",
-      blurb:
-        "Chatbot introduces Dr. Mia and explains the otoscope as a tiny flashlight hero.",
-      accent: "",
-      image:
-        "https://thumbs.dreamstime.com/b/doctor-examining-patient-s-ear-otoscope-clinic-setting-uses-to-examine-medical-perfect-healthcare-wellness-383673624.jpg",
-    },
-    {
-      id: 2,
-      title: "Scene 2: Heartbeat Detective",
-      construct: "Emotional Absorption",
-      blurb:
-        "Simulates heartbeat sounds and encourages the child to listen along.",
-      accent: "",
-      image:
-        "https://www.shutterstock.com/image-vector/male-doctor-pediatrician-examines-baby-260nw-2650333027.jpg",
-    },
-    {
-      id: 3,
-      title: "Scene 3: Calm Breathing Mission",
-      construct: "Emotional Regulation + Transfer",
-      blurb:
-        "Guides calm breathing exercises, visualizing air as colorful bubbles.",
-      accent: "",
-      image:
-        "https://cdn.vectorstock.com/i/1000v/14/05/gp-doctor-listen-breathing-lungs-heart-vector-48191405.jpg",
-    },
-    {
-      id: 4,
-      title: "Scene 4: Funny Reflex Game",
-      construct: "Play + Curiosity",
-      blurb: "Turns the reflex check into a quick silly game to ease nerves.",
-      accent: "",
-      image:
-        "https://cdn.vectorstock.com/i/1000v/14/05/gp-doctor-listen-breathing-lungs-heart-vector-48191405.jpg",
-    },
-    {
-      id: 5,
-      title: "Scene 5: Eye Check Adventure",
-      construct: "Exploration + Focus",
-      blurb: "A spot-the-animals quest that makes eye checks fun and engaging.",
-      accent: "",
-      image:
-        "https://media.istockphoto.com/id/1441376961/vector/ophthalmology-concept-eye-doctors-oculists-opticians-ophthalmologists-holding-eyeglasses.jpg?s=612x612&w=0&k=20&c=z3FP-N8XrbDL_ImMEykuapKoL8W9botxdPKZqMqWyaE=",
-    },
-    {
-      id: 6,
-      title: "Scene 6: Rewards and Achievement",
-      construct: "Rewards + Achievement",
-      blurb: "Celebrate bravery with stickers and a cheerful behavior chart.",
-      accent: "",
-      image:
-        "https://static.vecteezy.com/system/resources/previews/013/974/033/non_2x/smiling-young-male-doctor-in-white-medical-uniform-hold-stethoscope-ready-to-check-or-examine-patient-happy-male-gp-or-therapist-checkup-in-hospital-medicine-illustration-vector.jpg",
-    },
-  ];
-
-  const goToStep2 = () => {
-    if (userName.trim()) setStep(2);
-  };
-
-  const goToStep3 = () => {
-    // advance regardless; optionally require doctorName.trim()
-    setStep(3);
-  };
 
   const getStoryForScene = (sceneId) => {
     const stories = {

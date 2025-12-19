@@ -2,6 +2,9 @@ import { Epilogue, Slackey, Shadows_Into_Light } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "./components/SiteHeader";
 import FontController from "./components/FontController";
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
+config.autoAddCss = false;
 
 const epilogue = Epilogue({
   variable: "--font-epilogue",

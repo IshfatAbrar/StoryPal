@@ -202,7 +202,7 @@ export default function StoryPlayer({
               )}
 
               {currentStep.type === "doctor" && (
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                <div className="bg-[#f5f0ff] rounded-2xl p-4 border border-[#e4d7ff]">
                   <p className="text-zinc-900 text-lg leading-relaxed">
                     {interpolate(currentStep.message || "")}
                   </p>
@@ -211,7 +211,7 @@ export default function StoryPlayer({
 
               {currentStep.type === "user-input" && (
                 <div className="space-y-3">
-                  <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                  <div className="bg-[#f5f0ff] rounded-2xl p-4 border border-[#e4d7ff]">
                     <p className="text-zinc-900 text-lg mb-2">
                       {interpolate(currentStep.message || "")}
                     </p>
@@ -237,7 +237,7 @@ export default function StoryPlayer({
               {currentStep.type === "choice" &&
                 Array.isArray(currentStep.options) && (
                   <div className="space-y-3">
-                    <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                    <div className="bg-[#f5f0ff] rounded-2xl p-4 border border-[#e4d7ff]">
                       <p className="text-zinc-900 text-lg mb-2">
                         {interpolate(currentStep.message || "")}
                       </p>
@@ -252,8 +252,8 @@ export default function StoryPlayer({
                             onClick={() => setSelectedChoice(label)}
                             className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                               selectedChoice === label
-                                ? "bg-blue-500 text-white shadow-md"
-                                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                            ? "bg-[#5b217f] text-white shadow-md"
+                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
                             }`}
                           >
                             {label}
@@ -280,7 +280,7 @@ export default function StoryPlayer({
                       !userInputValue.trim()) ||
                     (currentStep.type === "choice" && !selectedChoice)
                   }
-                  className="rounded-xl px-6 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="rounded-xl px-6 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {isLastStep ? "Finish" : "Next"}
                 </button>

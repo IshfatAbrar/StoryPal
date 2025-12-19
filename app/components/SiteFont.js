@@ -66,7 +66,7 @@ export default function SiteFont() {
         <button
           type="button"
           onClick={handleApplyFont}
-          className="rounded-xl px-4 py-2 bg-blue-500 text-white hover:bg-blue-600"
+          className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
         >
           Apply font
         </button>
