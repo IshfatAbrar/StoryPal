@@ -8,6 +8,7 @@ import { db } from "../lib/firebaseClient";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "../hooks/useTranslation";
 
 const STORAGE_KEY = "storypal.modules";
 const PASSPORTS_KEY = "storypal.passports";
@@ -71,6 +72,7 @@ function buildContextFromPassport(p) {
 }
 
 export default function ChildPortal() {
+  const { t } = useTranslation();
   const [modules, setModules] = useState([]);
   const [selectedModule, setSelectedModule] = useState(null);
   const [passports, setPassports] = useState([]);
@@ -230,9 +232,9 @@ export default function ChildPortal() {
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-semibold text-zinc-900">Child Portal</h1>
+          <h1 className="text-4xl font-semibold text-zinc-900">{t("childPortal")}</h1>
         </div>
-        <p className="mt-2 text-zinc-700">Tap a story to begin.</p>
+        <p className="mt-2 text-zinc-700">{t("selectYourPassport")}</p>
 
         <div className="mt-4 rounded-2xl bg-white/80 backdrop-blur p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
@@ -265,7 +267,7 @@ export default function ChildPortal() {
                 </span>
                 <div className="text-left">
                   <div className="text-lg font-bold text-amber-900">
-                    {childStars[selectedPassportId]?.totalStars || 0}
+                    {childStars[selectedPassportId]?.totalStars || 0} {t("stars")}
                   </div>
                 </div>
               </div>
@@ -276,7 +278,7 @@ export default function ChildPortal() {
         <section className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredModules.length === 0 && (
             <div className="text-zinc-600">
-              No stories yet. Ask your parent to create one.
+              {t("noStoriesYet")}
             </div>
           )}
           {filteredModules.map((m) => (

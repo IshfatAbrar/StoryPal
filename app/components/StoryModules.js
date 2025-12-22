@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "../hooks/useTranslation";
 
 function createEmptyStep(stepType) {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -18,6 +19,19 @@ function createEmptyStep(stepType) {
     };
   }
   return { id, type: "choice", message: "", options: [""], imageUrl: "" };
+}
+
+function ensureStepIds(steps) {
+  if (!Array.isArray(steps)) return [];
+  return steps.map((step, idx) => {
+    if (!step.id) {
+      return {
+        ...step,
+        id: `step_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`,
+      };
+    }
+    return step;
+  });
 }
 
 function validateModule(moduleDef) {
@@ -43,13 +57,16 @@ export default function StoryModules({
   onPreview,
   initialData,
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initialData?.title || "");
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
   const [selectedPassportId, setSelectedPassportId] = useState(
     initialData?.childId || ""
   );
   const [steps, setSteps] = useState(
-    Array.isArray(initialData?.steps) ? initialData.steps : []
+    Array.isArray(initialData?.steps)
+      ? ensureStepIds(initialData.steps)
+      : []
   );
   const [editingId, setEditingId] = useState(initialData?.id || null);
   const [activeStage, setActiveStage] = useState(1);
@@ -90,7 +107,11 @@ export default function StoryModules({
       setTitle(initialData.title || "");
       setCoverImage(initialData.coverImage || "");
       setSelectedPassportId(initialData.childId || "");
-      setSteps(Array.isArray(initialData.steps) ? initialData.steps : []);
+      setSteps(
+        Array.isArray(initialData.steps)
+          ? ensureStepIds(initialData.steps)
+          : []
+      );
       setEditingId(initialData.id || null);
       setSceneFont(initialData.fontPreset || "hand");
       setStageFraming(
@@ -305,9 +326,9 @@ export default function StoryModules({
   return (
     <section className="mt-12">
       <div className="flex flex-col mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">Create Modules</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">{t("createModules")}</h1>
         <p className="text-zinc-700">
-          Create personalized story modules for your child.
+          {t("createPersonalizedStories")}
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -315,7 +336,7 @@ export default function StoryModules({
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm text-zinc-700">
-                Title
+                {t("title")}
               </label>
               <input
                 id="title"
@@ -327,7 +348,7 @@ export default function StoryModules({
             </div>
             <div>
               <label htmlFor="cover" className="block text-sm text-zinc-700">
-                Cover Image URL (optional)
+                {t("coverImageUrl")}
               </label>
               <input
                 id="cover"
@@ -392,7 +413,7 @@ export default function StoryModules({
             <ol className="space-y-4">
               {steps.map((step, idx) => (
                 <li
-                  key={step.id}
+                  key={step.id || `step-${idx}-${step.type}`}
                   className="rounded-xl border border-zinc-200 p-4 bg-white"
                 >
                   <div className="flex items-center justify-between">
@@ -576,7 +597,7 @@ export default function StoryModules({
               <button
                 type="button"
                 onClick={handlePreview}
-                disabled={!isValid || !selectedPassport}
+                disabled={!isValid}
                 className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 Preview
@@ -584,7 +605,7 @@ export default function StoryModules({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!isValid || !selectedPassport}
+                disabled={!isValid}
                 className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 {editingId ? "Update module" : "Save module"}

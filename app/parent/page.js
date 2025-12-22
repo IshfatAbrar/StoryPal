@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import StoryPlayer from "../components/StoryPlayer";
 import SiteFont from "../components/SiteFont";
+import SiteLanguage from "../components/SiteLanguage";
 import SavedModules from "../components/SavedModules";
 import ReflectionJournal from "../components/ReflectionJournal";
 import CommunicationPassports from "../components/CommunicationPassports";
 import StoryModules from "../components/StoryModules";
+import { useTranslation } from "../hooks/useTranslation";
 import { auth, db } from "../lib/firebaseClient";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
@@ -366,6 +368,7 @@ const PARENT_TRAINING_MODULE = {
 
 export default function ParentPortal() {
   const router = useRouter();
+  const { t } = useTranslation();
   const savedModulesRef = useRef(null);
   const [modules, setModules] = useState([]);
   const [passports, setPassports] = useState([]);
@@ -648,14 +651,14 @@ export default function ParentPortal() {
         <div className="relative">
           <div className="flex items-center gap-3 justify-between">
             <h1 className="text-4xl font-semibold text-zinc-900">
-              Parent Portal
+              {t("parentPortal")}
             </h1>
             <button
               type="button"
               onClick={() => setShowPassportDropdown(!showPassportDropdown)}
               className="rounded-xl px-2 py-2 flex items-center justify-center  bg-slate-200 text-[#5b217f] hover:bg-slate-300 transition-colors"
-              title="Communication Passports"
-              aria-label="Communication Passports"
+              title={t("communicationPassports")}
+              aria-label={t("communicationPassports")}
             >
               <p className="text-sm font-semibold">
                 {selectedPassport?.avatar ? (
@@ -716,13 +719,11 @@ export default function ParentPortal() {
         {/* Interactive Parent Training – always available */}
         <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
           <h2 className="text-xl font-semibold text-zinc-900">
-            Interactive Parent Training
+            {t("interactiveParentTraining")}
           </h2>
           <p className="mt-2 text-sm text-zinc-700">
-            Learn the science behind StoryPal and how to use{" "}
-            <span className="font-semibold">Co‑Action</span>—doing the steps
-            together with your child—to make stories feel safe, playful, and
-            effective.
+            {t("trainingDescription")}{" "}
+            <span className="font-semibold">{t("coAction")}</span> {t("trainingDescription2")}
           </p>
           <div className="mt-4 flex items-center gap-3">
             <button
@@ -733,10 +734,10 @@ export default function ParentPortal() {
               }}
               className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] text-sm font-semibold"
             >
-              Start training
+              {t("startTraining")}
             </button>
             <span className="text-xs text-zinc-500">
-              3–5 minutes · Read or listen together
+              {t("minutesRead")}
             </span>
           </div>
         </section>
@@ -757,12 +758,10 @@ export default function ParentPortal() {
           <div className="mt-10 flex flex-col items-center justify-center min-h-[40vh]">
             <div className="text-center max-w-md">
               <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
-                Create a Passport to Continue
+                {t("createPassportToContinue")}
               </h2>
               <p className="text-lg text-zinc-700 mb-6">
-                Before you can design story modules, you need to create a
-                Communication Passport for your child. Click the passport icon
-                above to get started.
+                {t("createPassportDescription")}
               </p>
             </div>
           </div>
@@ -1279,6 +1278,9 @@ export default function ParentPortal() {
 
         {/* Site Font */}
         <SiteFont />
+
+        {/* Site Language */}
+        <SiteLanguage />
       </div>
 
       {showPreview && previewModule && (

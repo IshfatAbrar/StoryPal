@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function SiteFont() {
   const [pendingUiFont, setPendingUiFont] = useState("classic");
   const [fontAppliedAt, setFontAppliedAt] = useState(0);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -27,11 +29,10 @@ export default function SiteFont() {
   return (
     <section className="mt-6 rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-zinc-900">Site Font</h2>
+        <h2 className="text-xl font-semibold text-zinc-900">{t("siteFont")}</h2>
       </div>
       <p className="mt-1 text-sm text-zinc-600">
-        Choose the font for both Parent and Child portals. Click Apply to
-        confirm.
+        {t("chooseFont")}
       </p>
       <div className="mt-3 flex flex-wrap gap-4">
         <label className="inline-flex items-center gap-2">
@@ -68,14 +69,14 @@ export default function SiteFont() {
           onClick={handleApplyFont}
           className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
         >
-          Apply font
+          {t("applyFont")}
         </button>
         {fontAppliedAt ? (
-          <span className="text-sm text-emerald-700">Applied</span>
+          <span className="text-sm text-emerald-700">{t("applied")}</span>
         ) : null}
       </div>
       <div className="mt-4 rounded-xl border border-zinc-200 p-4 bg-white">
-        <div className="text-sm text-zinc-500 mb-2">Preview</div>
+        <div className="text-sm text-zinc-500 mb-2">{t("preview")}</div>
         <div
           className="text-lg text-zinc-900"
           style={{

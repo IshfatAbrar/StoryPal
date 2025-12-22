@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function ReflectionJournal({ modules, reflections, onSave, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
@@ -55,10 +57,10 @@ export default function ReflectionJournal({ modules, reflections, onSave, onEdit
     <section className="mt-12">
       <div className="flex flex-col justify-between mb-4">
         <h2 className="text-2xl font-semibold text-zinc-900">
-          Reflection Journal
+          {t("reflectionJournal")}
         </h2>
         <p className="text-zinc-700">
-          Track your child's progress and reflect on your journey.
+          {t("trackProgress")}
         </p>
       </div>
       <div className="rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">

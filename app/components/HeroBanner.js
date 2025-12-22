@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function HeroBanner() {
+  const { t } = useTranslation();
   return (
     <section
       className="relative overflow-hidden"
@@ -24,7 +26,7 @@ export default function HeroBanner() {
           <div className=" text-center">
             <h1 className="leading-tight">
               <span className=" text-5xl sm:text-6xl lg:text-7xl text-[#5b217f]">
-                Welcome to StoryPal!
+                {t("welcome")}!
               </span>
             </h1>
             <p className="mt-6 text-[#7c2da3] mx-auto text-md lg:text-xl font-semibold max-w-[700px]">
