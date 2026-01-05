@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
@@ -22,7 +23,13 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-40 w-full backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/70 border-b border-[#e8e2cf]">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ffdc6b] via-[#fca5a5] to-[#a78bfa] shadow-inner"></div>
+          <Image
+            src="/logo.png"
+            alt="StoryPal Logo"
+            width={36}
+            height={36}
+            className="w-9 h-9 object-contain"
+          />
           <span className="text-2xl font-extrabold tracking-wide text-[#5b217f] group-hover:text-[#7c2da3] transition-colors">
             StoryPal
           </span>

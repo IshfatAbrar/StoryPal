@@ -51,10 +51,11 @@ h2 {
 }
 
 h3 {
-  font-family: var(--app-font) !important;
   font-weight: 600;
   letter-spacing: 0;
 }
+
+/* Story player fonts are set via inline styles, no global override needed */
 
 h4,
 h5,

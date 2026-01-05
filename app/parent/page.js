@@ -132,7 +132,7 @@ const DEFAULT_MODULES = [
     title: "The Green Mission",
     coverImage:
       "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/518340410_24346993624931719_8032300327163763434_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=SiJGh32h-uoQ7kNvwEChBY_&_nc_oc=AdmE0VEUaheHfuaNi_mMG3omU13YPpjg1dNiY--1tESxEWCK4HGDTXa2GtXwdPudLgA&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=J4Z0Zoueh-xe2e5L-bKcnw&oh=00_Afl9jvL9XbSy4cElYoWjmf9tuF7RPu6aWo-QjV13gjj-EQ&oe=694A4683",
-    fontPreset: "hand",
+    fontPreset: "classic",
     childId: null,
     stageDesign: null,
     steps: [
@@ -258,7 +258,7 @@ const DEFAULT_MODULES = [
     title: "Brave School Wave",
     coverImage:
       "https://scontent-lga3-2.xx.fbcdn.net/v/t39.30808-6/520233296_1130962188872105_8796726091235058018_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=xfsDwob31QMQ7kNvwFaeTzt&_nc_oc=AdnH9z0N8VOZnCJbQ1yIfK2UyFvXBs1DMHINhdBIFr6FT1eTBdB7H_ifEvFxe5ch6JM&_nc_zt=23&_nc_ht=scontent-lga3-2.xx&_nc_gid=P---7by10uCwJuUYbFuKqQ&oh=00_Afkn2n1hzqT8JDCugwRPWRNRQNqmWyGUCSMA7XBLqWFeag&oe=694A5C95",
-    fontPreset: "hand",
+    fontPreset: "classic",
     childId: null,
     stageDesign: null,
     steps: [
@@ -361,7 +361,7 @@ const PARENT_TRAINING_MODULE = {
     {
       type: "doctor",
       message:
-        'Beautiful. As you build modules, keep coming back to Co‑Action: "How can we try this together, side‑by‑side, in a way that feels safe and playful?" You’re not alone—StoryPal is here to coach you step by step.',
+        'Beautiful. As you build stories, keep coming back to Co-Action: "How can we try this together, side-by-side, in a way that feels safe and playful?" You\'re not alone—StoryPal is here to coach you step by step.',
     },
   ],
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -21,13 +21,99 @@ function createEmptyStep(stepType) {
   return { id, type: "choice", message: "", options: [""], imageUrl: "" };
 }
 
+function getStepTypeLabel(stepType) {
+  if (stepType === "doctor") return "Message for children";
+  if (stepType === "user-input") return "Child's input";
+  if (stepType === "choice") return "Multiple choice";
+  return stepType;
+}
+
+// Helper function to convert file to base64 data URL
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Available template variables for insertion
+const TEMPLATE_VARIABLES = [
+  { label: "Child's Name", value: "@child.name" },
+  { label: "Child's Age", value: "@child.age" },
+  { label: "Pronoun (they/he/she)", value: "@child.pronouns.subject" },
+  { label: "Pronoun (them/him/her)", value: "@child.pronouns.object" },
+  {
+    label: "Possessive (their/his/her)",
+    value: "@child.pronouns.possessiveAdjective",
+  },
+  {
+    label: "Possessive (theirs/his/hers)",
+    value: "@child.pronouns.possessivePronoun",
+  },
+];
+
+// Component for inserting template variables
+function VariableSelector({ onInsert }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelect = (value) => {
+    onInsert(value);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="rounded-lg px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200 flex items-center gap-1"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-4 h-4"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+        Insert Variable
+      </button>
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-zinc-200 rounded-lg shadow-lg py-1 min-w-[200px]">
+            {TEMPLATE_VARIABLES.map((variable) => (
+              <button
+                key={variable.value}
+                type="button"
+                onClick={() => handleSelect(variable.value)}
+                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-zinc-700"
+              >
+                <div className="font-medium">{variable.label}</div>
+                <div className="text-xs text-zinc-500">{variable.value}</div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ensureStepIds(steps) {
   if (!Array.isArray(steps)) return [];
   return steps.map((step, idx) => {
     if (!step.id) {
       return {
         ...step,
-        id: `step_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 8)}`,
+        id: `step_${Date.now()}_${idx}_${Math.random()
+          .toString(36)
+          .slice(2, 8)}`,
       };
     }
     return step;
@@ -59,18 +145,19 @@ export default function StoryModules({
 }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialData?.title || "");
+  const textareaRefs = useRef({});
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
   const [selectedPassportId, setSelectedPassportId] = useState(
     initialData?.childId || ""
   );
   const [steps, setSteps] = useState(
-    Array.isArray(initialData?.steps)
-      ? ensureStepIds(initialData.steps)
-      : []
+    Array.isArray(initialData?.steps) ? ensureStepIds(initialData.steps) : []
   );
   const [editingId, setEditingId] = useState(initialData?.id || null);
   const [activeStage, setActiveStage] = useState(1);
-  const [sceneFont, setSceneFont] = useState(initialData?.fontPreset || "hand");
+  const [sceneFont, setSceneFont] = useState(
+    initialData?.fontPreset || "classic"
+  );
   const [stageFraming, setStageFraming] = useState(
     initialData?.stageDesign?.framing || {
       focus: "greeting",
@@ -108,12 +195,10 @@ export default function StoryModules({
       setCoverImage(initialData.coverImage || "");
       setSelectedPassportId(initialData.childId || "");
       setSteps(
-        Array.isArray(initialData.steps)
-          ? ensureStepIds(initialData.steps)
-          : []
+        Array.isArray(initialData.steps) ? ensureStepIds(initialData.steps) : []
       );
       setEditingId(initialData.id || null);
-      setSceneFont(initialData.fontPreset || "hand");
+      setSceneFont(initialData.fontPreset || "classic");
       setStageFraming(
         initialData.stageDesign?.framing || {
           focus: "greeting",
@@ -149,7 +234,7 @@ export default function StoryModules({
       setCoverImage("");
       setSteps([]);
       setEditingId(null);
-      setSceneFont("hand");
+      setSceneFont("classic");
       setStageFraming({
         focus: "greeting",
         scenario: "school",
@@ -185,46 +270,20 @@ export default function StoryModules({
 
   function generateStepsFromStages() {
     const s = buildStageContext();
-    const generated = [
-      {
-        type: "doctor",
-        message:
-          "Hi {{child.name}}! Today we're focusing on {{stages.framing.focus}} at {{stages.framing.scenario}}. We'll use our {{stages.framing.tone}} superpower.",
-      },
-      {
-        type: "doctor",
-        message:
-          "Sometimes starting can feel new. {{child.name}} {{stages.immersion.feeling}}. Can we {{stages.immersion.coplay}} together?",
-      },
-      s.immersion.imagery
-        ? {
-            type: "doctor",
-            message: "Look around: {{stages.immersion.imagery}}",
-          }
-        : null,
-      {
-        type: "choice",
-        message: "Ready to try it?",
-        options: ["Yes, let's try!", "Not yet", "Let's watch once first"],
-      },
-      {
-        type: "doctor",
-        message:
-          "Great effort! You earned a {{stages.continuity.badge}} badge. Next time, we'll explore {{stages.continuity.nextArc}}.",
-      },
-    ]
-      .filter(Boolean)
-      .map((step) => {
-        const base =
-          step.type === "doctor"
-            ? createEmptyStep("doctor")
-            : step.type === "user-input"
-            ? createEmptyStep("user-input")
-            : createEmptyStep("choice");
-        return { ...base, ...step };
-      });
+    const baseStep = createEmptyStep("doctor");
+    const generated = {
+      ...baseStep,
+      message:
+        "Hi @child.name! Today we're focusing on " +
+        (s.framing.focus || "our practice") +
+        " at " +
+        (s.framing.scenario || "a safe space") +
+        ". We'll use our " +
+        (s.framing.tone || "brave") +
+        " superpower.",
+    };
 
-    setSteps((prev) => [...prev, ...generated]);
+    setSteps((prev) => [...prev, generated]);
   }
 
   function addStep(stepType) {
@@ -252,6 +311,43 @@ export default function StoryModules({
     setSteps((prev) =>
       prev.map((s) => (s.id === stepId ? { ...s, [field]: value } : s))
     );
+  }
+
+  function insertVariableAtCursor(stepId, field, variable) {
+    const element = textareaRefs.current[`${stepId}-${field}`];
+    if (!element) {
+      // If no element ref, just append to the end
+      setSteps((prev) => {
+        const step = prev.find((s) => s.id === stepId);
+        if (step) {
+          const currentValue = step[field] || "";
+          return prev.map((s) =>
+            s.id === stepId ? { ...s, [field]: currentValue + variable } : s
+          );
+        }
+        return prev;
+      });
+      return;
+    }
+
+    const start = element.selectionStart || 0;
+    const end = element.selectionEnd || 0;
+    const currentValue = element.value || "";
+    const newValue =
+      currentValue.slice(0, start) + variable + currentValue.slice(end);
+
+    setSteps((prev) =>
+      prev.map((s) => (s.id === stepId ? { ...s, [field]: newValue } : s))
+    );
+
+    // Restore cursor position after state update
+    setTimeout(() => {
+      element.focus();
+      const newCursorPos = start + variable.length;
+      if (element.setSelectionRange) {
+        element.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
   }
 
   function updateChoiceOption(stepId, optionIndex, value) {
@@ -293,7 +389,7 @@ export default function StoryModules({
       title: title || "Untitled Story",
       coverImage,
       steps,
-      fontPreset: sceneFont || "hand",
+      fontPreset: sceneFont || "classic",
     }),
     [editingId, title, coverImage, steps, sceneFont]
   );
@@ -313,7 +409,7 @@ export default function StoryModules({
         reflection: { ...stageReflection },
         continuity: { ...stageContinuity },
       },
-      fontPreset: sceneFont || "hand",
+      fontPreset: sceneFont || "classic",
     };
     if (!validateModule(moduleDefinition)) return;
     onSave(moduleDefinition);
@@ -326,10 +422,10 @@ export default function StoryModules({
   return (
     <section className="mt-12">
       <div className="flex flex-col mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">{t("createModules")}</h1>
-        <p className="text-zinc-700">
-          {t("createPersonalizedStories")}
-        </p>
+        <h1 className="text-2xl font-semibold text-zinc-900">
+          {t("createModules")}
+        </h1>
+        <p className="text-zinc-700">{t("createPersonalizedStories")}</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
@@ -348,15 +444,59 @@ export default function StoryModules({
             </div>
             <div>
               <label htmlFor="cover" className="block text-sm text-zinc-700">
-                {t("coverImageUrl")}
+                Cover Image (optional)
               </label>
-              <input
-                id="cover"
-                value={coverImage}
-                onChange={(e) => setCoverImage(e.target.value)}
-                placeholder="https://example.com/cover.jpg"
-                className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-              />
+              <div className="mt-1 flex gap-2">
+                <input
+                  id="cover"
+                  value={coverImage}
+                  onChange={(e) => setCoverImage(e.target.value)}
+                  placeholder="Paste an image link here (optional)"
+                  className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                />
+                <label className="rounded-xl px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200 cursor-pointer transition-colors flex items-center gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Upload Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const dataURL = await fileToDataURL(file);
+                          setCoverImage(dataURL);
+                        } catch (error) {
+                          console.error("Error uploading image:", error);
+                          alert("Failed to upload image. Please try again.");
+                        }
+                      }
+                      e.target.value = ""; // Reset input
+                    }}
+                  />
+                </label>
+              </div>
+              {coverImage && (
+                <div className="mt-2 relative w-full max-w-xs aspect-4/3 rounded-lg overflow-hidden border border-zinc-200">
+                  <img
+                    src={coverImage}
+                    alt="Cover preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -380,13 +520,13 @@ export default function StoryModules({
                 ))}
               </select>
               <p className="mt-1 text-xs text-zinc-500">
-                Select which child this module is for. Leave as "All Children"
-                for general modules.
+                Select which child this story is for. Leave as "All Children"
+                for stories that work for everyone.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-700">Add step:</span>
+              <span className="text-sm text-zinc-700">Add scene:</span>
               <button
                 type="button"
                 onClick={() => addStep("doctor")}
@@ -399,7 +539,7 @@ export default function StoryModules({
                 onClick={() => addStep("user-input")}
                 className="rounded-xl px-3 py-1.5 bg-[#6b2a99] text-white hover:bg-[#7c2da3]"
               >
-                Ask for input
+                Child's input
               </button>
               <button
                 type="button"
@@ -418,7 +558,7 @@ export default function StoryModules({
                 >
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-zinc-600">
-                      Step {idx + 1} • {step.type}
+                      {getStepTypeLabel(step.type)}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -448,10 +588,24 @@ export default function StoryModules({
                   {step.type === "doctor" && (
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className="block text-sm text-zinc-700">
-                          Message
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm text-zinc-700">
+                            Message
+                          </label>
+                          <VariableSelector
+                            onInsert={(variable) =>
+                              insertVariableAtCursor(
+                                step.id,
+                                "message",
+                                variable
+                              )
+                            }
+                          />
+                        </div>
                         <textarea
+                          ref={(el) => {
+                            textareaRefs.current[`${step.id}-message`] = el;
+                          }}
                           value={step.message}
                           onChange={(e) =>
                             updateStep(step.id, "message", e.target.value)
@@ -463,16 +617,65 @@ export default function StoryModules({
                       </div>
                       <div>
                         <label className="block text-sm text-zinc-700">
-                          Step image URL (optional)
+                          Image (optional)
                         </label>
-                        <input
-                          value={step.imageUrl || ""}
-                          onChange={(e) =>
-                            updateStep(step.id, "imageUrl", e.target.value)
-                          }
-                          placeholder="https://example.com/scene.jpg"
-                          className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                        />
+                        <div className="mt-1 flex gap-2">
+                          <input
+                            value={step.imageUrl || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, "imageUrl", e.target.value)
+                            }
+                            placeholder="Paste an image link here (optional)"
+                            className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                          />
+                          <label className="rounded-xl px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200 cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const dataURL = await fileToDataURL(file);
+                                    updateStep(step.id, "imageUrl", dataURL);
+                                  } catch (error) {
+                                    console.error(
+                                      "Error uploading image:",
+                                      error
+                                    );
+                                    alert(
+                                      "Failed to upload image. Please try again."
+                                    );
+                                  }
+                                }
+                                e.target.value = ""; // Reset input
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {step.imageUrl && (
+                          <div className="mt-2 relative w-full max-w-xs aspect-4/3 rounded-lg overflow-hidden border border-zinc-200">
+                            <img
+                              src={step.imageUrl}
+                              alt="Step preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -480,10 +683,24 @@ export default function StoryModules({
                   {step.type === "user-input" && (
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className="block text-sm text-zinc-700">
-                          Prompt
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm text-zinc-700">
+                            Prompt
+                          </label>
+                          <VariableSelector
+                            onInsert={(variable) =>
+                              insertVariableAtCursor(
+                                step.id,
+                                "message",
+                                variable
+                              )
+                            }
+                          />
+                        </div>
                         <textarea
+                          ref={(el) => {
+                            textareaRefs.current[`${step.id}-message`] = el;
+                          }}
                           value={step.message}
                           onChange={(e) =>
                             updateStep(step.id, "message", e.target.value)
@@ -494,30 +711,93 @@ export default function StoryModules({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-zinc-700">
-                          Placeholder
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm text-zinc-700">
+                            Placeholder
+                          </label>
+                          <VariableSelector
+                            onInsert={(variable) =>
+                              insertVariableAtCursor(
+                                step.id,
+                                "placeholder",
+                                variable
+                              )
+                            }
+                          />
+                        </div>
                         <input
+                          ref={(el) => {
+                            textareaRefs.current[`${step.id}-placeholder`] = el;
+                          }}
                           value={step.placeholder || ""}
                           onChange={(e) =>
                             updateStep(step.id, "placeholder", e.target.value)
                           }
-                          placeholder="Type your answer..."
+                          placeholder="Enter the child's response..."
                           className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
                         />
                       </div>
                       <div>
                         <label className="block text-sm text-zinc-700">
-                          Step image URL (optional)
+                          Image (optional)
                         </label>
-                        <input
-                          value={step.imageUrl || ""}
-                          onChange={(e) =>
-                            updateStep(step.id, "imageUrl", e.target.value)
-                          }
-                          placeholder="https://example.com/input-scene.jpg"
-                          className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                        />
+                        <div className="mt-1 flex gap-2">
+                          <input
+                            value={step.imageUrl || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, "imageUrl", e.target.value)
+                            }
+                            placeholder="Paste an image link here (optional)"
+                            className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                          />
+                          <label className="rounded-xl px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200 cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const dataURL = await fileToDataURL(file);
+                                    updateStep(step.id, "imageUrl", dataURL);
+                                  } catch (error) {
+                                    console.error(
+                                      "Error uploading image:",
+                                      error
+                                    );
+                                    alert(
+                                      "Failed to upload image. Please try again."
+                                    );
+                                  }
+                                }
+                                e.target.value = ""; // Reset input
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {step.imageUrl && (
+                          <div className="mt-2 relative w-full max-w-xs aspect-4/3 rounded-lg overflow-hidden border border-zinc-200">
+                            <img
+                              src={step.imageUrl}
+                              alt="Step preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -525,10 +805,24 @@ export default function StoryModules({
                   {step.type === "choice" && (
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className="block text-sm text-zinc-700">
-                          Question
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-sm text-zinc-700">
+                            Question
+                          </label>
+                          <VariableSelector
+                            onInsert={(variable) =>
+                              insertVariableAtCursor(
+                                step.id,
+                                "message",
+                                variable
+                              )
+                            }
+                          />
+                        </div>
                         <textarea
+                          ref={(el) => {
+                            textareaRefs.current[`${step.id}-message`] = el;
+                          }}
                           value={step.message}
                           onChange={(e) =>
                             updateStep(step.id, "message", e.target.value)
@@ -559,7 +853,7 @@ export default function StoryModules({
                                 onChange={(e) =>
                                   updateChoiceOption(step.id, i, e.target.value)
                                 }
-                                placeholder={`Option ${i + 1}`}
+                                placeholder={`Choice ${i + 1}`}
                                 className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
                               />
                               <button
@@ -576,16 +870,65 @@ export default function StoryModules({
                       </div>
                       <div>
                         <label className="block text-sm text-zinc-700">
-                          Step image URL (optional)
+                          Image (optional)
                         </label>
-                        <input
-                          value={step.imageUrl || ""}
-                          onChange={(e) =>
-                            updateStep(step.id, "imageUrl", e.target.value)
-                          }
-                          placeholder="https://example.com/choice-scene.jpg"
-                          className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
-                        />
+                        <div className="mt-1 flex gap-2">
+                          <input
+                            value={step.imageUrl || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, "imageUrl", e.target.value)
+                            }
+                            placeholder="Paste an image link here (optional)"
+                            className="flex-1 bg-white/90 border border-zinc-200 rounded-xl px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-300/50 focus:border-rose-300 transition-all"
+                          />
+                          <label className="rounded-xl px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium border border-blue-200 cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Upload
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const dataURL = await fileToDataURL(file);
+                                    updateStep(step.id, "imageUrl", dataURL);
+                                  } catch (error) {
+                                    console.error(
+                                      "Error uploading image:",
+                                      error
+                                    );
+                                    alert(
+                                      "Failed to upload image. Please try again."
+                                    );
+                                  }
+                                }
+                                e.target.value = ""; // Reset input
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {step.imageUrl && (
+                          <div className="mt-2 relative w-full max-w-xs aspect-4/3 rounded-lg overflow-hidden border border-zinc-200">
+                            <img
+                              src={step.imageUrl}
+                              alt="Step preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -608,7 +951,7 @@ export default function StoryModules({
                 disabled={!isValid}
                 className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
-                {editingId ? "Update module" : "Save module"}
+                {editingId ? "Update story" : "Save story"}
               </button>
             </div>
           </div>
@@ -671,6 +1014,9 @@ export default function StoryModules({
                       <option value="greeting">Greeting / Saying hello</option>
                       <option value="sharing">Sharing / Turn‑taking</option>
                       <option value="routine">Morning routine</option>
+                      <option value="transitions">
+                        Transitions: between activities
+                      </option>
                       <option value="sensory">
                         Managing sensory surprises
                       </option>
@@ -698,6 +1044,15 @@ export default function StoryModules({
                         Grocery store: checkout line
                       </option>
                       <option value="clinic">Clinic: waiting room</option>
+                      <option value="transitions">
+                        Transitions: changing activities
+                      </option>
+                      <option value="routine">
+                        Daily routine: getting ready
+                      </option>
+                      <option value="park">Park: playground interaction</option>
+                      <option value="home">Home: family time</option>
+                      <option value="restaurant">Restaurant: dining out</option>
                     </select>
                   </div>
                   <div>
@@ -715,8 +1070,13 @@ export default function StoryModules({
                       className="mt-1 w-full bg-white/90 border border-zinc-200 rounded-xl px-4 py-2"
                     >
                       <option value="brave">Encouraging & brave</option>
+                      <option value="encouraging">
+                        Encouraging & supportive
+                      </option>
                       <option value="calm">Calm & soothing</option>
                       <option value="curious">Curious & playful</option>
+                      <option value="confident">Confident & empowering</option>
+                      <option value="gentle">Gentle & reassuring</option>
                     </select>
                   </div>
                   <div>

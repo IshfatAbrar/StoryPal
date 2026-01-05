@@ -11,7 +11,7 @@ export const translations = {
     communicationPassports: "Communication Passports",
     createPassportToContinue: "Create a Passport to Continue",
     createPassportDescription:
-      "Before you can design story modules, you need to create a Communication Passport for your child. Click the passport icon above to get started.",
+      "Before you can design stories, you need to create a Communication Passport for your child. Click the passport icon above to get started.",
     interactiveParentTraining: "Interactive Parent Training",
     trainingDescription: "Learn the science behind StoryPal and how to use",
     coAction: "Co‑Action",
@@ -44,29 +44,29 @@ export const translations = {
     welcome: "Welcome to StoryPal",
 
     // Story Modules
-    createModules: "Create Modules",
+    createModules: "Create Stories",
     createPersonalizedStories:
-      "Create personalized story modules for your child.",
+      "Create personalized stories for your child.",
     title: "Title",
     coverImageUrl: "Cover Image URL (optional)",
     forChild: "For Child (Passport)",
     allChildren: "All Children / General",
     selectChildModule:
-      'Select which child this module is for. Leave as "All Children" for general modules.',
+      'Select which child this story is for. Leave as "All Children" for stories that work for everyone.',
     addStep: "Add step:",
     message: "Message",
     askForInput: "Ask for input",
     multipleChoice: "Multiple choice",
     preview: "Preview",
-    saveModule: "Save module",
-    updateModule: "Update module",
+    saveModule: "Save story",
+    updateModule: "Update story",
     designGuide: "Design Guide",
 
     // Saved Modules
-    savedModules: "Saved modules",
+    savedModules: "Saved Stories",
     modulesSavedAccount:
-      "Modules saved to your account. Tap to preview or edit.",
-    noModulesYet: "No modules yet.",
+      "Stories saved to your account. Tap to preview or edit.",
+    noModulesYet: "No stories yet.",
     untitledStory: "Untitled Story",
     noImage: "No image",
     previewEdit: "Preview / Edit",
