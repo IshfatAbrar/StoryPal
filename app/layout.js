@@ -3,6 +3,7 @@ import "./globals.css";
 import SiteHeader from "./components/SiteHeader";
 import FontController from "./components/FontController";
 import LanguageController from "./components/LanguageController";
+import TelemetryProvider from "./components/TelemetryProvider";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
       >
         <FontController />
         <LanguageController />
+        <TelemetryProvider />
         <SiteHeader />
         {children}
       </body>

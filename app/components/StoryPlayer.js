@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
+import { Sparkles } from "lucide-react";
 
 /**
  * A reusable player that renders a sequence of story steps.
@@ -65,7 +66,8 @@ export default function StoryPlayer({
 
   // --- Speech synthesis (optional narration) ---
   const voicesRef = useRef([]);
-  const isSpeakingRef = useRef(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const currentUtteranceRef = useRef(null);
 
   function loadVoices() {
@@ -73,6 +75,9 @@ export default function StoryPlayer({
     const list = window.speechSynthesis.getVoices();
     if (list && list.length) {
       voicesRef.current = list;
+      console.log("Voices loaded:", list.length, "voices available");
+    } else {
+      console.log("Voices not yet loaded, will retry");
     }
   }
 
@@ -80,27 +85,59 @@ export default function StoryPlayer({
     const list = voicesRef.current || [];
     if (!list.length) return null;
 
+    console.log("Available voices:", list.map(v => `${v.name} (${v.lang})`));
+    console.log("Looking for:", voiceType, "voice");
+
     if (voiceType === "male") {
-      // Heuristics for male voices
+      // Heuristics for male voices - comprehensive patterns
       const maleHeuristics = [
-        /male/i,
-        /david|daniel|alex|thomas|james|john|mark|paul|steve|michael/i,
+        /\bmale\b/i,
+        /\bman\b/i,
+        /\bmale\s/i,
+        /david|daniel|alex|thomas|james|john|mark|paul|steve|michael|george|matthew|andrew|ryan|christopher|ben|eric|jason|kevin|robert|william/i,
+        /man\s/i,
+        /\(male\)/i,
       ];
+      
       for (const h of maleHeuristics) {
         const v = list.find((voice) => h.test(voice.name));
-        if (v) return v;
+        if (v) {
+          console.log("Selected male voice:", v.name);
+          return v;
+        }
+      }
+      
+      // Fallback: try to find voices that DON'T match female patterns
+      const notFemaleVoices = list.filter(voice => {
+        const name = voice.name.toLowerCase();
+        return !/(female|woman|girl|zira|jenny|aria|samantha|victoria|karen|allison|zoe|michelle|lisa|susan|hazel|emily|sarah|anna|maria)/i.test(name);
+      });
+      
+      if (notFemaleVoices.length > 0) {
+        console.log("Selected male voice (by exclusion):", notFemaleVoices[0].name);
+        return notFemaleVoices[0];
       }
     } else {
       // Heuristics for female voices
       const femaleHeuristics = [
-        /female/i,
-        /zir|jenny|aria|samantha|victoria|karen|allison|zoe|michelle|lisa|susan|hazel/i,
+        /\bfemale\b/i,
+        /\bwoman\b/i,
+        /\bfemale\s/i,
+        /zira|jenny|aria|samantha|victoria|karen|allison|zoe|michelle|lisa|susan|hazel|emily|sarah|anna|maria|mary|elizabeth|kate|linda|nancy|betty/i,
+        /woman\s/i,
+        /\(female\)/i,
       ];
+      
       for (const h of femaleHeuristics) {
         const v = list.find((voice) => h.test(voice.name));
-        if (v) return v;
+        if (v) {
+          console.log("Selected female voice:", v.name);
+          return v;
+        }
       }
     }
+    
+    console.log("Using default voice:", list[0].name);
     return list[0];
   }
 
@@ -109,9 +146,31 @@ export default function StoryPlayer({
     if (!text || !audioEnabled) return;
     // cancel previous utterance
     window.speechSynthesis.cancel();
+    
+    // Ensure voices are loaded
+    if (!voicesRef.current || voicesRef.current.length === 0) {
+      loadVoices();
+      // If still no voices after loading, wait a bit and retry once
+      if (!voicesRef.current || voicesRef.current.length === 0) {
+        console.warn("Voices not loaded yet, retrying in 100ms");
+        setTimeout(() => {
+          loadVoices();
+          if (audioEnabled) {
+            speak(text);
+          }
+        }, 100);
+        return;
+      }
+    }
+    
     const utter = new SpeechSynthesisUtterance(text);
     const voice = pickPreferredVoice();
-    if (voice) utter.voice = voice;
+    if (voice) {
+      utter.voice = voice;
+      console.log("Speaking with voice:", voice.name, "| Requested:", voiceType);
+    } else {
+      console.warn("No voice selected, using system default");
+    }
 
     // Set speed based on user selection
     const speedMap = {
@@ -122,23 +181,43 @@ export default function StoryPlayer({
     utter.rate = speedMap[speed] || 0.95;
     utter.pitch = voiceType === "female" ? 1.1 : 1.0;
 
-    isSpeakingRef.current = true;
+    setIsSpeaking(true);
+    setIsPaused(false);
     currentUtteranceRef.current = utter;
-    window.speechSynthesis.speak(utter);
+    
+    utter.onstart = () => {
+      console.log("Speech started");
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+    
     utter.onend = () => {
-      isSpeakingRef.current = false;
+      console.log("Speech ended");
+      setIsSpeaking(false);
+      setIsPaused(false);
       currentUtteranceRef.current = null;
     };
-    utter.onerror = () => {
-      isSpeakingRef.current = false;
+    
+    utter.onerror = (event) => {
+      // "interrupted" error is expected when switching voices or stopping speech
+      if (event.error === "interrupted") {
+        console.log("Speech interrupted (expected when switching voices or stopping)");
+      } else {
+        console.error("Speech error:", event.error);
+      }
+      setIsSpeaking(false);
+      setIsPaused(false);
       currentUtteranceRef.current = null;
     };
+    
+    window.speechSynthesis.speak(utter);
   }
 
   function stopSpeaking() {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      isSpeakingRef.current = false;
+      setIsSpeaking(false);
+      setIsPaused(false);
       currentUtteranceRef.current = null;
     }
   }
@@ -146,20 +225,27 @@ export default function StoryPlayer({
   function pauseSpeaking() {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.pause();
+      setIsPaused(true);
     }
   }
 
   function resumeSpeaking() {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.resume();
+      setIsPaused(false);
     }
   }
 
   useEffect(() => {
-    if (!narrate) return;
+    // Always load voices when component mounts
     loadVoices();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
+      
+      // Force load voices after a short delay (some browsers need this)
+      setTimeout(() => {
+        loadVoices();
+      }, 100);
     }
     return () => {
       if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -167,16 +253,22 @@ export default function StoryPlayer({
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
-  }, [narrate]);
+  }, []);
 
   useEffect(() => {
     if (!audioEnabled || !currentStep) return;
-    const type = currentStep.type;
-    if (type === "doctor") {
-      speak(interpolate(currentStep.message || ""));
-    } else if (type === "user-input" || type === "choice") {
-      speak(interpolate(currentStep.message || ""));
-    }
+    
+    // Small delay to ensure voices are loaded before speaking
+    const speakTimeout = setTimeout(() => {
+      const type = currentStep.type;
+      if (type === "doctor") {
+        speak(interpolate(currentStep.message || ""));
+      } else if (type === "user-input" || type === "choice") {
+        speak(interpolate(currentStep.message || ""));
+      }
+    }, 200);
+    
+    return () => clearTimeout(speakTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioEnabled, currentStepIndex, voiceType, speed]);
 
@@ -257,7 +349,78 @@ export default function StoryPlayer({
 
   if (!Array.isArray(steps) || steps.length === 0) return null;
 
-  // Generate parent guide content based on step type
+  // State for AI-generated co-action prompts
+  const [aiGuides, setAiGuides] = useState({});
+  const [loadingGuide, setLoadingGuide] = useState(false);
+  const [guideError, setGuideError] = useState(null);
+
+  // Generate AI co-action prompt for current step
+  useEffect(() => {
+    if (!currentStep) return;
+
+    // Check if step has custom parent guide
+    if (currentStep.parentGuide) return;
+
+    // Check if AI co-action is disabled via environment variable
+    if (process.env.NEXT_PUBLIC_DISABLE_AI_COACTION === "true") {
+      return; // Skip AI generation, use fallback prompts
+    }
+
+    // Check if we already have an AI guide for this step
+    const stepKey = `${currentStepIndex}_${currentStep.type}_${currentStep.message?.substring(0, 50)}`;
+    if (aiGuides[stepKey]) return;
+
+    // Generate AI guide
+    const generateGuide = async () => {
+      setLoadingGuide(true);
+      setGuideError(null);
+
+      try {
+        const response = await fetch("/api/generate-coaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stepType: currentStep.type,
+            stepMessage: currentStep.message || "",
+            storyTitle: title,
+            childContext: templateContext,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          
+          // If quota is exhausted, silently fall back to default prompts
+          if (errorData.quotaExhausted || errorData.error === "Quota exhausted") {
+            console.warn("AI co-action quota exhausted, using default prompts");
+            return; // Don't throw error, just use fallback
+          }
+          
+          throw new Error(errorData.message || "Failed to generate guide");
+        }
+
+        const data = await response.json();
+        if (data.guide) {
+          setAiGuides((prev) => ({
+            ...prev,
+            [stepKey]: data.guide,
+          }));
+        }
+      } catch (error) {
+        console.error("Error generating co-action guide:", error);
+        // Only show error for non-quota issues
+        if (!error.message?.includes("quota") && !error.message?.includes("Quota")) {
+          setGuideError(error.message);
+        }
+      } finally {
+        setLoadingGuide(false);
+      }
+    };
+
+    generateGuide();
+  }, [currentStep, currentStepIndex, aiGuides, title, templateContext]);
+
+  // Get parent guide content (AI-generated or fallback)
   const parentGuide = useMemo(() => {
     if (!currentStep) return null;
 
@@ -266,7 +429,22 @@ export default function StoryPlayer({
       return currentStep.parentGuide;
     }
 
-    // Default parent guides based on step type
+    // Check for AI-generated guide
+    const stepKey = `${currentStepIndex}_${currentStep.type}_${currentStep.message?.substring(0, 50)}`;
+    if (aiGuides[stepKey]) {
+      return aiGuides[stepKey];
+    }
+
+    // Show loading state
+    if (loadingGuide) {
+      return {
+        title: "Generating...",
+        description: "Creating personalized co-action guidance...",
+        coActionPrompt: "",
+      };
+    }
+
+    // Fallback to default guides if AI fails
     if (currentStep.type === "doctor") {
       return {
         title: "Guide Moment",
@@ -293,7 +471,7 @@ export default function StoryPlayer({
       };
     }
     return null;
-  }, [currentStep]);
+  }, [currentStep, currentStepIndex, aiGuides, loadingGuide]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -301,7 +479,7 @@ export default function StoryPlayer({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative z-10 w-full max-w-6xl max-h-[90vh] rounded-2xl bg-white shadow-lg animate-[fadeInUp_200ms_ease-out] flex flex-col lg:flex-row overflow-hidden story-player-content">
+      <div className="relative z-10 w-full max-w-6xl max-h-[90vh] min-h-[600px] rounded-2xl bg-white shadow-lg animate-[fadeInUp_200ms_ease-out] flex flex-col lg:flex-row overflow-hidden story-player-content">
         {/* Main Story Content */}
         <div className="flex-1 flex flex-col overflow-y-auto relative">
           {/* Close button for desktop */}
@@ -539,9 +717,14 @@ export default function StoryPlayer({
                     <button
                       type="button"
                       onClick={() => {
-                        if (isSpeakingRef.current) {
+                        if (isPaused) {
+                          // If paused, resume
+                          resumeSpeaking();
+                        } else if (isSpeaking) {
+                          // If speaking, pause
                           pauseSpeaking();
                         } else {
+                          // If not speaking, start speaking
                           if (currentStep) {
                             const type = currentStep.type;
                             if (
@@ -556,7 +739,7 @@ export default function StoryPlayer({
                       }}
                       className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors"
                     >
-                      {isSpeakingRef.current ? "Pause" : "Play"}
+                      {isPaused ? "Resume" : (isSpeaking ? "Pause" : "Play")}
                     </button>
                     <button
                       type="button"
@@ -581,6 +764,20 @@ export default function StoryPlayer({
                 unoptimized
                 sizes="90vw"
               />
+            </div>
+          ) : moduleId === "parent-training" ? (
+            <div className="relative w-full aspect-4/3 overflow-hidden bg-gradient-to-br from-purple-100 via-pink-50 to-blue-50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4 text-purple-700">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-24 h-24"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+                <span className="text-lg font-semibold">Parent Training</span>
+              </div>
             </div>
           ) : null}
           <div className="p-6 flex-1 flex flex-col" style={fontStyle}>
@@ -932,9 +1129,14 @@ export default function StoryPlayer({
                       <button
                         type="button"
                         onClick={() => {
-                          if (isSpeakingRef.current) {
+                          if (isPaused) {
+                            // If paused, resume
+                            resumeSpeaking();
+                          } else if (isSpeaking) {
+                            // If speaking, pause
                             pauseSpeaking();
                           } else {
+                            // If not speaking, start speaking
                             if (currentStep) {
                               const type = currentStep.type;
                               if (
@@ -949,7 +1151,7 @@ export default function StoryPlayer({
                         }}
                         className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors"
                       >
-                        {isSpeakingRef.current ? "Pause" : "Play"}
+                        {isPaused ? "Resume" : (isSpeaking ? "Pause" : "Play")}
                       </button>
                       <button
                         type="button"
@@ -969,7 +1171,7 @@ export default function StoryPlayer({
         {/* Parent Guide Panel */}
         {parentGuide && (
           <div className="lg:w-96 bg-[#fef9f0] border-l border-[#f5e6d3] p-6 flex flex-col overflow-y-auto">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-between mb-4">
               <span className="text-amber-800 text-xs font-semibold tracking-wide uppercase flex items-center gap-1">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -986,25 +1188,52 @@ export default function StoryPlayer({
                 </svg>
                 Parent Guide
               </span>
+              {!currentStep?.parentGuide && !loadingGuide && parentGuide.coActionPrompt && (
+                <span className="text-purple-600 flex items-center gap-1" title="AI-generated guidance">
+                  <Sparkles className="w-3 h-3" />
+                </span>
+              )}
             </div>
 
-            <h3 className="text-xl font-semibold text-amber-900 mb-2">
+            <h3 className="text-xl font-semibold text-amber-900 mb-2 flex items-center gap-2">
               {parentGuide.title}
+              {loadingGuide && (
+                <span className="animate-spin">
+                  <svg className="w-4 h-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </span>
+              )}
             </h3>
             <p className="text-amber-800 text-sm mb-6">
               {parentGuide.description}
             </p>
 
-            {parentGuide.coActionPrompt && (
+            {loadingGuide ? (
+              <div className="bg-white/50 rounded-xl p-4 border border-amber-200 flex items-center justify-center gap-2">
+                <div className="animate-pulse text-amber-600">Generating personalized guidance...</div>
+              </div>
+            ) : parentGuide.coActionPrompt ? (
               <div className="bg-white/50 rounded-xl p-4 border border-amber-200">
-                <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
+                <div className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
                   Co-Action Prompt
                 </div>
                 <p className="text-amber-900 text-sm italic leading-relaxed">
                   {parentGuide.coActionPrompt}
                 </p>
               </div>
-            )}
+            ) : guideError ? (
+              <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                <div className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">
+                  Error
+                </div>
+                <p className="text-red-700 text-sm">
+                  {guideError}
+                </p>
+              </div>
+            ) : null}
 
             {/* Step Progress */}
             <div className="mt-auto pt-6 flex items-center justify-between border-t border-amber-200">

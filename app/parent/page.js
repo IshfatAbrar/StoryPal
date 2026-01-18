@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import StoryPlayer from "../components/StoryPlayer";
-import SiteFont from "../components/SiteFont";
-import SiteLanguage from "../components/SiteLanguage";
 import SavedModules from "../components/SavedModules";
 import ReflectionJournal from "../components/ReflectionJournal";
 import CommunicationPassports from "../components/CommunicationPassports";
@@ -130,8 +128,8 @@ const DEFAULT_MODULES = [
   {
     id: "demo-green-mission",
     title: "The Green Mission",
-    coverImage:
-      "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/518340410_24346993624931719_8032300327163763434_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=SiJGh32h-uoQ7kNvwEChBY_&_nc_oc=AdmE0VEUaheHfuaNi_mMG3omU13YPpjg1dNiY--1tESxEWCK4HGDTXa2GtXwdPudLgA&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=J4Z0Zoueh-xe2e5L-bKcnw&oh=00_Afl9jvL9XbSy4cElYoWjmf9tuF7RPu6aWo-QjV13gjj-EQ&oe=694A4683",
+    // Use a bundled image (from /public) so it works offline and doesn't depend on external URLs
+    coverImage: "/green.jpg",
     fontPreset: "classic",
     childId: null,
     stageDesign: null,
@@ -202,8 +200,7 @@ const DEFAULT_MODULES = [
   {
     id: "demo-calm-breathing",
     title: "Calm Breathing Mission",
-    coverImage:
-      "https://scontent-lga3-3.xx.fbcdn.net/v/t39.30808-6/522631022_3386434758163669_8506587699192492412_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=8bXqb4m4vE8Q7kNvwGvfMBC&_nc_oc=Adlg0OsWBWQVNdh7q_wGwaLWAaq_hHistDSHGPzbD3tFJ1Y0zlMF59eRGYomG-XEG1E&_nc_zt=23&_nc_ht=scontent-lga3-3.xx&_nc_gid=cSJUhkaLW0TV5zib1pC69A&oh=00_AfkJWVr2KeC34R5a_PiAx5RLm1Zx2PqxscOEFceAzeMwKQ&oe=694A6CC2",
+    coverImage: "/calm.jpg",
     fontPreset: "classic",
     childId: null,
     stageDesign: null,
@@ -256,8 +253,7 @@ const DEFAULT_MODULES = [
   {
     id: "demo-school-wave",
     title: "Brave School Wave",
-    coverImage:
-      "https://scontent-lga3-2.xx.fbcdn.net/v/t39.30808-6/520233296_1130962188872105_8796726091235058018_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=aa7b47&_nc_ohc=xfsDwob31QMQ7kNvwFaeTzt&_nc_oc=AdnH9z0N8VOZnCJbQ1yIfK2UyFvXBs1DMHINhdBIFr6FT1eTBdB7H_ifEvFxe5ch6JM&_nc_zt=23&_nc_ht=scontent-lga3-2.xx&_nc_gid=P---7by10uCwJuUYbFuKqQ&oh=00_Afkn2n1hzqT8JDCugwRPWRNRQNqmWyGUCSMA7XBLqWFeag&oe=694A5C95",
+    coverImage: "/brave.jpg",
     fontPreset: "classic",
     childId: null,
     stageDesign: null,
@@ -377,6 +373,7 @@ export default function ParentPortal() {
   const [reflections, setReflections] = useState([]);
   // Story module editing state
   const [editingModuleId, setEditingModuleId] = useState(null);
+  const [showStoryBuilder, setShowStoryBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewModule, setPreviewModule] = useState(null);
   const [authReady, setAuthReady] = useState(false);
@@ -421,7 +418,7 @@ export default function ParentPortal() {
         const snap = await getDocs(collection(db, "users", uid, "modules"));
         const cloudModules = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-        // Ensure the two demo modules are present at least once
+        // Ensure demo modules are present at least once
         const missingDefaults = DEFAULT_MODULES.filter(
           (demo) => !cloudModules.some((m) => m.id === demo.id)
         );
@@ -442,10 +439,46 @@ export default function ParentPortal() {
           );
         }
 
+        // Migrate existing demo modules away from external image URLs
+        const demoById = new Map(DEFAULT_MODULES.map((m) => [m.id, m]));
+        const modulesNeedingCoverMigration = cloudModules.filter((m) => {
+          const demo = demoById.get(m.id);
+          if (!demo) return false;
+          return typeof m.coverImage === "string" && m.coverImage.startsWith("http");
+        });
+
+        if (modulesNeedingCoverMigration.length > 0) {
+          await Promise.all(
+            modulesNeedingCoverMigration.map((m) => {
+              const demo = demoById.get(m.id);
+              return setDoc(
+                doc(db, "users", uid, "modules", m.id),
+                { coverImage: demo.coverImage, updatedAt: serverTimestamp() },
+                { merge: true }
+              );
+            })
+          );
+        }
+
+        const migratedCloudModules =
+          modulesNeedingCoverMigration.length > 0
+            ? cloudModules.map((m) => {
+                const demo = demoById.get(m.id);
+                if (
+                  demo &&
+                  typeof m.coverImage === "string" &&
+                  m.coverImage.startsWith("http")
+                ) {
+                  return { ...m, coverImage: demo.coverImage };
+                }
+                return m;
+              })
+            : cloudModules;
+
         const mergedModules =
           missingDefaults.length > 0
-            ? [...cloudModules, ...missingDefaults]
-            : cloudModules;
+            ? [...migratedCloudModules, ...missingDefaults]
+            : migratedCloudModules;
 
         if (!cancelled) {
           setModules(mergedModules);
@@ -573,6 +606,7 @@ export default function ParentPortal() {
     }
     if (editingModuleId === id) {
       setEditingModuleId(null);
+      setShowStoryBuilder(false);
     }
   }
 
@@ -593,6 +627,7 @@ export default function ParentPortal() {
     setModules(next);
     saveModulesToStorage(next, uid);
     setEditingModuleId(null);
+    setShowStoryBuilder(false);
 
     // Scroll to saved modules section
     setTimeout(() => {
@@ -628,7 +663,31 @@ export default function ParentPortal() {
 
   function handleModuleEdit(module) {
     setEditingModuleId(module.id);
+    setShowStoryBuilder(true);
   }
+
+  function openCreateStory() {
+    setEditingModuleId(null);
+    setShowStoryBuilder(true);
+  }
+
+  function closeStoryBuilder() {
+    setShowStoryBuilder(false);
+    setEditingModuleId(null);
+  }
+
+  // When the modal is open, prevent the background page from scrolling.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!showStoryBuilder) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showStoryBuilder]);
 
   if (showAuthGate) {
     return (
@@ -656,6 +715,7 @@ export default function ParentPortal() {
             <button
               type="button"
               onClick={() => setShowPassportDropdown(!showPassportDropdown)}
+              data-telemetry="parent_passport_dropdown_toggle"
               className="rounded-xl px-2 py-2 flex items-center justify-center  bg-slate-200 text-[#5b217f] hover:bg-slate-300 transition-colors"
               title={t("communicationPassports")}
               aria-label={t("communicationPassports")}
@@ -732,6 +792,7 @@ export default function ParentPortal() {
                 setPreviewModule(PARENT_TRAINING_MODULE);
                 setShowPreview(true);
               }}
+              data-telemetry="parent_training_start"
               className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] text-sm font-semibold"
             >
               {t("startTraining")}
@@ -746,6 +807,13 @@ export default function ParentPortal() {
         <div ref={savedModulesRef}>
           <SavedModules
             modules={modules}
+            onCreate={openCreateStory}
+            canCreate={passports.length > 0}
+            createDisabledReason={
+              passports.length > 0
+                ? ""
+                : "Create a Communication Passport first to start building stories."
+            }
             onEdit={(m) => {
               if (m.childId) setSelectedPassportId(m.childId);
               handleModuleEdit(m);
@@ -767,17 +835,6 @@ export default function ParentPortal() {
           </div>
         ) : (
           <>
-            <StoryModules
-              passports={passports}
-              onSave={handleModuleSave}
-              onPreview={handleModulePreview}
-              initialData={
-                editingModuleId
-                  ? modules.find((m) => m.id === editingModuleId)
-                  : null
-              }
-            />
-
             {/* Reflection Journal */}
             <ReflectionJournal
               modules={modules}
@@ -1276,12 +1333,49 @@ export default function ParentPortal() {
           </div>
         )}
 
-        {/* Site Font */}
-        <SiteFont />
-
-        {/* Site Language */}
-        <SiteLanguage />
       </div>
+
+      {showStoryBuilder && passports.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={closeStoryBuilder}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-3xl bg-white/95 backdrop-blur border border-zinc-200 shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-zinc-200 bg-white/90 backdrop-blur">
+              <div>
+                <div className="text-xl font-semibold text-zinc-900">
+                  {editingModuleId ? "Edit story" : "Create story"}
+                </div>
+                <div className="text-sm text-zinc-600">
+                  Build and preview stories, then save to your account.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeStoryBuilder}
+                data-telemetry="parent_story_builder_close"
+                className="rounded-xl px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
+              >
+                {t("close")}
+              </button>
+            </div>
+            <div className="px-6 pb-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <StoryModules
+                passports={passports}
+                onSave={handleModuleSave}
+                onPreview={handleModulePreview}
+                initialData={
+                  editingModuleId
+                    ? modules.find((m) => m.id === editingModuleId)
+                    : null
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPreview && previewModule && (
         <StoryPlayer

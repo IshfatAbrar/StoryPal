@@ -4,7 +4,12 @@ export const translations = {
     home: "Home",
     parent: "Parent",
     child: "Child",
+    settings: "Settings",
     logout: "Logout",
+
+    // Settings
+    settingsTitle: "Settings",
+    settingsDescription: "Choose your site font and language.",
 
     // Parent Portal
     parentPortal: "Parent Portal",
@@ -89,7 +94,12 @@ export const translations = {
     home: "Inicio",
     parent: "Padre",
     child: "Niño",
+    settings: "Ajustes",
     logout: "Cerrar sesión",
+
+    // Settings
+    settingsTitle: "Ajustes",
+    settingsDescription: "Elige la fuente y el idioma del sitio.",
 
     // Parent Portal
     parentPortal: "Portal de Padres",
@@ -174,7 +184,12 @@ export const translations = {
     home: "Início",
     parent: "Pai",
     child: "Criança",
+    settings: "Configurações",
     logout: "Sair",
+
+    // Settings
+    settingsTitle: "Configurações",
+    settingsDescription: "Escolha a fonte e o idioma do site.",
 
     // Parent Portal
     parentPortal: "Portal dos Pais",
@@ -259,7 +274,12 @@ export const translations = {
     home: "হোম",
     parent: "পিতামাতা",
     child: "শিশু",
+    settings: "সেটিংস",
     logout: "লগআউট",
+
+    // Settings
+    settingsTitle: "সেটিংস",
+    settingsDescription: "সাইটের ফন্ট এবং ভাষা বেছে নিন।",
 
     // Parent Portal
     parentPortal: "পিতামাতা পোর্টাল",
@@ -345,7 +365,12 @@ export const translations = {
     home: "首页",
     parent: "家长",
     child: "孩子",
+    settings: "设置",
     logout: "登出",
+
+    // Settings
+    settingsTitle: "设置",
+    settingsDescription: "选择网站字体和语言。",
 
     // Parent Portal
     parentPortal: "家长门户",

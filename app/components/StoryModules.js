@@ -144,6 +144,10 @@ export default function StoryModules({
   initialData,
 }) {
   const { t } = useTranslation();
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiRetryAt, setAiRetryAt] = useState(0);
+  const [aiNow, setAiNow] = useState(0);
   const [title, setTitle] = useState(initialData?.title || "");
   const textareaRefs = useRef({});
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || "");
@@ -268,23 +272,100 @@ export default function StoryModules({
     };
   }
 
-  function generateStepsFromStages() {
-    const s = buildStageContext();
-    const baseStep = createEmptyStep("doctor");
-    const generated = {
-      ...baseStep,
-      message:
-        "Hi @child.name! Today we're focusing on " +
-        (s.framing.focus || "our practice") +
-        " at " +
-        (s.framing.scenario || "a safe space") +
-        ". We'll use our " +
-        (s.framing.tone || "brave") +
-        " superpower.",
-    };
+  async function generateStepsFromStages() {
+    setAiError("");
+    if (aiRetryAt && Date.now() < aiRetryAt) return;
+    setAiGenerating(true);
+    try {
+      const res = await fetch("/api/generate-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stages: buildStageContext(),
+          currentTitle: title || "",
+          // Provide recent steps so the model continues instead of re-starting
+          previousSteps: steps.slice(-6).map((s) => ({
+            type: s.type,
+            message: s.message,
+            placeholder: s.placeholder,
+            options: s.options,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 429) {
+          const retrySeconds =
+            typeof data?.retryAfterSeconds === "number"
+              ? data.retryAfterSeconds
+              : 30;
+          const until = Date.now() + Math.max(1, retrySeconds) * 1000;
+          setAiRetryAt(until);
+          setAiNow(Date.now());
+          throw new Error(
+            `Rate limited. Try again in ${Math.max(1, retrySeconds)}s.`
+          );
+        }
+        throw new Error(data?.error || "Failed to generate steps.");
+      }
 
-    setSteps((prev) => [...prev, generated]);
+      const incomingStep =
+        data?.step && typeof data.step === "object" ? data.step : null;
+      if (!incomingStep) throw new Error("No step returned.");
+
+      // Optionally adopt the suggested title if user hasn't set one
+      if (
+        !title.trim() &&
+        typeof data?.title === "string" &&
+        data.title.trim()
+      ) {
+        setTitle(data.title.trim());
+      }
+
+      setSteps((prev) => {
+        const s = incomingStep;
+        const base = createEmptyStep(s.type);
+        if (s.type === "doctor") {
+          return [
+            ...prev,
+            { ...base, message: s.message || "", imageUrl: s.imageUrl || "" },
+          ];
+        }
+        if (s.type === "user-input") {
+          return [
+            ...prev,
+            {
+              ...base,
+              message: s.message || "",
+              placeholder: s.placeholder || "",
+              imageUrl: s.imageUrl || "",
+            },
+          ];
+        }
+        // choice
+        return [
+          ...prev,
+          {
+            ...base,
+            message: s.message || "",
+            options: Array.isArray(s.options) ? s.options : [""],
+            imageUrl: s.imageUrl || "",
+          },
+        ];
+      });
+    } catch (e) {
+      setAiError(e?.message || "Failed to generate steps.");
+    } finally {
+      setAiGenerating(false);
+    }
   }
+
+  useEffect(() => {
+    if (!aiRetryAt) return;
+    if (Date.now() >= aiRetryAt) return;
+    const id = setInterval(() => setAiNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [aiRetryAt]);
 
   function addStep(stepType) {
     setSteps((prev) => [...prev, createEmptyStep(stepType)]);
@@ -421,12 +502,6 @@ export default function StoryModules({
 
   return (
     <section className="mt-12">
-      <div className="flex flex-col mb-4">
-        <h1 className="text-2xl font-semibold text-zinc-900">
-          {t("createModules")}
-        </h1>
-        <p className="text-zinc-700">{t("createPersonalizedStories")}</p>
-      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl bg-white/80 backdrop-blur p-5 shadow-sm">
           <div className="space-y-4">
@@ -941,6 +1016,7 @@ export default function StoryModules({
                 type="button"
                 onClick={handlePreview}
                 disabled={!isValid}
+                data-telemetry="parent_story_preview"
                 className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 Preview
@@ -949,6 +1025,9 @@ export default function StoryModules({
                 type="button"
                 onClick={handleSave}
                 disabled={!isValid}
+                data-telemetry={
+                  editingId ? "parent_story_update" : "parent_story_save"
+                }
                 className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3] disabled:opacity-50"
               >
                 {editingId ? "Update story" : "Save story"}
@@ -1313,11 +1392,23 @@ export default function StoryModules({
             <button
               type="button"
               onClick={generateStepsFromStages}
+              disabled={
+                aiGenerating || (aiRetryAt && (aiNow || Date.now()) < aiRetryAt)
+              }
               className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
             >
-              Generate steps with Ai{" "}
+              {aiGenerating
+                ? "Generating…"
+                : aiRetryAt && (aiNow || Date.now()) < aiRetryAt
+                ? `Rate limited (${Math.ceil(
+                    (aiRetryAt - (aiNow || Date.now())) / 1000
+                  )}s)`
+                : "Generate step with Ai"}{" "}
               <Sparkles className="inline-block w-4 h-4 mb-1" />
             </button>
+            {aiError ? (
+              <span className="text-sm text-red-700">{aiError}</span>
+            ) : null}
           </div>
         </div>
       </div>

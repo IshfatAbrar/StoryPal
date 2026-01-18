@@ -294,6 +294,7 @@ export default function CommunicationPassports({
                 <button
                   type="button"
                   onClick={() => handleEdit(selectedPassport)}
+                  data-telemetry="parent_passport_edit"
                   className="rounded-xl px-4 py-2 bg-[#5b217f] text-white hover:bg-[#7c2da3]"
                 >
                   Edit
@@ -301,6 +302,7 @@ export default function CommunicationPassports({
                 <button
                   type="button"
                   onClick={() => handleDelete(selectedPassport.id)}
+                  data-telemetry="parent_passport_delete"
                   className="rounded-xl px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100"
                 >
                   Delete

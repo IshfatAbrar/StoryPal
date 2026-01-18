@@ -22,7 +22,11 @@ export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/70 border-b border-[#e8e2cf]">
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link
+          href="/"
+          data-telemetry="nav_home_logo"
+          className="flex items-center gap-2 group"
+        >
           <Image
             src="/logo.png"
             alt="StoryPal Logo"
@@ -36,20 +40,40 @@ export default function SiteHeader() {
         </Link>
         <div className="flex items-center gap-6">
           <nav className="hidden md:flex items-center gap-6 text-[#5b217f]">
-            <Link href="/" className="hover:underline underline-offset-4">
+            <Link
+              href="/"
+              data-telemetry="nav_home"
+              className="hover:underline underline-offset-4"
+            >
               {t("home")}
             </Link>
-            <Link href="/parent" className="hover:underline underline-offset-4">
+            <Link
+              href="/parent"
+              data-telemetry="nav_parent"
+              className="hover:underline underline-offset-4"
+            >
               {t("parent")}
             </Link>
-            <Link href="/child" className="hover:underline underline-offset-4">
+            <Link
+              href="/child"
+              data-telemetry="nav_child"
+              className="hover:underline underline-offset-4"
+            >
               {t("child")}
+            </Link>
+            <Link
+              href="/settings"
+              data-telemetry="nav_settings"
+              className="hover:underline underline-offset-4"
+            >
+              {t("settings")}
             </Link>
           </nav>
 
           <button
             type="button"
             onClick={triggerLogout}
+            data-telemetry="auth_logout"
             className="text-[#5b217f] hover:text-[#967ba7] transition-colors"
             title={t("logout")}
             aria-label={t("logout")}
